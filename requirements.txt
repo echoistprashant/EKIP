@@ -1,0 +1,22 @@
+# API Framework and Server
+fastapi
+uvicorn[standard]
+
+# Configuration and Validation
+pydantic
+pydantic-settings
+python-dotenv
+
+# Structured JSON Logging
+structlog
+
+# HTTP Client and API Testing
+httpx
+
+# Testing
+pytest
+pytest-asyncio
+
+# Linting and Type Checking
+ruff
+mypy
