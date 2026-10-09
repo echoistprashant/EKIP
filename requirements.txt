@@ -20,3 +20,9 @@ pytest-asyncio
 # Linting and Type Checking
 ruff
 mypy
+
+#database
+sqlalchemy[asyncio]
+asyncpg
+pgvector
+alembic
