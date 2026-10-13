@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_role
@@ -9,8 +9,25 @@ from app.models.user import User
 from app.repositories.collections_repo import CollectionsRepository
 from app.repositories.documents_repo import DocumentsRepository
 from app.schemas.document import DocumentCreate, DocumentResponse
+from app.services.ingestion_service import IngestionService
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
+
+
+@router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_202_ACCEPTED)
+async def upload_document(
+    collection_id: uuid.UUID = Form(...),
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_role("admin", "editor")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Upload and trigger document parsing, cleaning, and structural chunking.
+    Idempotent: Re-uploading the same file returns existing document without duplicate chunks.
+    """
+    service = IngestionService(db)
+    doc, _ = await service.ingest_file(file, collection_id, current_user)
+    return doc
 
 
 @router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
@@ -20,7 +37,7 @@ async def register_document(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Register document metadata and check idempotency.
+    Register document metadata only.
     Editor or Admin role required.
     """
     col_repo = CollectionsRepository(db)
@@ -38,7 +55,6 @@ async def register_document(
         tenant_id=current_user.tenant_id,
     )
     if existing_doc:
-        # Idempotent response: return existing document
         return existing_doc
 
     new_doc = Document(

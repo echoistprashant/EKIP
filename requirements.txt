@@ -1,6 +1,7 @@
 # API Framework and Server
 fastapi
 uvicorn[standard]
+python-multipart
 
 # Configuration and Validation
 pydantic
@@ -31,3 +32,7 @@ alembic
 # Auth & Security
 pyjwt
 bcrypt
+
+# Ingestion & Parsing
+pypdf
+markdown-it-py
