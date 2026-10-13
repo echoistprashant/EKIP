@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://ekip_user:ekip_password@localhost:5432/ekip_db"
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Authentication & Security
+    JWT_SECRET: str = "ekip-super-secure-jwt-secret-key-change-in-production-2026"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

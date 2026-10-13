@@ -5,6 +5,7 @@ uvicorn[standard]
 # Configuration and Validation
 pydantic
 pydantic-settings
+email-validator
 python-dotenv
 
 # Structured JSON Logging
@@ -21,8 +22,12 @@ pytest-asyncio
 ruff
 mypy
 
-#database
+# Database
 sqlalchemy[asyncio]
 asyncpg
 pgvector
 alembic
+
+# Auth & Security
+pyjwt
+bcrypt
