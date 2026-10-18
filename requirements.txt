@@ -39,3 +39,6 @@ markdown-it-py
 
 # Embeddings & Vectors
 fastembed
+
+# Caching & Message Queue
+redis

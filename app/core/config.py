@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     # Query Transformation
     DEFAULT_QUERY_TRANSFORMATION: Literal["none", "hyde", "expansion", "rewrite", "mock"] = "none"
 
+    # Semantic Caching Layer
+    ENABLE_SEMANTIC_CACHE: bool = True
+    SEMANTIC_CACHE_PROVIDER: Literal["redis", "inmemory"] = "redis"
+    SEMANTIC_CACHE_THRESHOLD: float = 0.92
+    SEMANTIC_CACHE_TTL_SECONDS: int = 86400
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

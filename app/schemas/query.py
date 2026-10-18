@@ -15,6 +15,7 @@ class QueryRequest(BaseModel):
         default="none",
         description="Query transformation strategy: 'none', 'hyde', 'expansion', 'rewrite'.",
     )
+    bypass_cache: bool = Field(default=False, description="Whether to bypass semantic cache.")
     temperature: float = Field(default=0.0, ge=0.0, le=1.0, description="LLM sampling temperature.")
     max_context_tokens: int = Field(
         default=3000, ge=500, le=16000, description="Token budget for context injection."
@@ -43,6 +44,10 @@ class QueryResponse(BaseModel):
     answer: str
     citations: list[CitationItem]
     abstained: bool
+    cached: bool = False
+    cache_type: str | None = None
+    cache_similarity: float | None = None
+    matched_query: str | None = None
     model: str
     prompt_version: str
     input_tokens: int

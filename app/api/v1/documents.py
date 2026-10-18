@@ -27,6 +27,13 @@ async def upload_document(
     """
     service = IngestionService(db)
     doc, _ = await service.ingest_file(file, collection_id, current_user)
+
+    # Invalidate semantic cache for this collection to prevent stale responses
+    from app.cache import get_semantic_cache
+    cache = get_semantic_cache()
+    if cache is not None:
+        await cache.invalidate_collection(current_user.tenant_id, collection_id)
+
     return doc
 
 

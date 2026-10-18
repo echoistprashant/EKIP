@@ -143,6 +143,39 @@ All communication must occur on the dedicated war-room Slack channel.
             assert log_item is not None
             assert log_item.rewritten_query is not None
 
+        # 4d. Test Semantic / Exact Cache Hit on repeated query
+        cached_res = await client.post(
+            "/api/v1/query",
+            headers=headers_a,
+            json={
+                "query": "What is the notification time for Severity 1 security incidents?",
+                "collection_ids": [col_id],
+                "top_k": 5,
+            },
+        )
+        assert cached_res.status_code == 200
+        cached_data = cached_res.json()
+        assert cached_data["cached"] is True
+        assert cached_data["cache_type"] in ["exact", "semantic"]
+        assert cached_data["cost_usd"] == 0.0
+        assert cached_data["input_tokens"] == 0
+        assert cached_data["output_tokens"] == 0
+        assert len(cached_data["citations"]) >= 1
+
+        # 4e. Test bypass_cache=True forces fresh execution
+        bypass_res = await client.post(
+            "/api/v1/query",
+            headers=headers_a,
+            json={
+                "query": "What is the notification time for Severity 1 security incidents?",
+                "collection_ids": [col_id],
+                "bypass_cache": True,
+                "top_k": 5,
+            },
+        )
+        assert bypass_res.status_code == 200
+        assert bypass_res.json()["cached"] is False
+
         # 5. Abstention Test: Ask question with zero matching context
         abstain_res = await client.post(
             "/api/v1/query",
