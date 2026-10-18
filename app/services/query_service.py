@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cache import BaseSemanticCache, get_semantic_cache
 from app.core.config import settings
+from app.evaluation import RAGTriadEvaluator, get_evaluator
 from app.llm import LLMClient, LLMRequest, get_llm_client
 from app.models.query_log import QueryCitation, QueryLog
 from app.models.user import User
@@ -37,7 +38,8 @@ class QueryService:
     7. Token-budgeted, Lost-in-the-Middle XML context assembly
     8. Resilient LLM generation with versioned grounded prompts
     9. Sentence-level citation extraction and grounding verification
-    10. Audit and telemetry persistence (query_logs + query_citations)
+    10. RAG Triad Evaluation & Hallucination Guardrails
+    11. Audit and telemetry persistence (query_logs + query_citations)
     """
 
     def __init__(
@@ -49,6 +51,7 @@ class QueryService:
         transformer: BaseQueryTransformer | None = None,
         cache: BaseSemanticCache | None = None,
         embedder: BaseEmbedder | None = None,
+        evaluator: RAGTriadEvaluator | None = None,
         llm_client: LLMClient | None = None,
         context_builder: ContextBuilder | None = None,
         prompt_manager: PromptManager | None = None,
@@ -61,6 +64,7 @@ class QueryService:
         self.transformer = transformer
         self.cache = cache if cache is not None else get_semantic_cache()
         self.embedder = embedder if embedder is not None else get_embedder()
+        self.evaluator = evaluator or get_evaluator()
         self.llm_client = llm_client or get_llm_client()
         self.context_builder = context_builder or ContextBuilder()
         self.prompt_manager = prompt_manager or PromptManager()
@@ -180,6 +184,8 @@ class QueryService:
                     output_tokens=0,
                     cost_usd=0.0,
                     latency_ms=hit_latency,
+                    groundedness_score=cache_hit.response.groundedness_score,
+                    hallucination_warning=cache_hit.response.hallucination_warning,
                     query_id=query_id,
                 )
 
@@ -199,6 +205,10 @@ class QueryService:
                     output_tokens=0,
                     cost_usd=0.0,
                     latency_ms=hit_latency,
+                    groundedness_score=cached_res.groundedness_score,
+                    context_relevance_score=1.0,
+                    answer_relevance_score=1.0,
+                    hallucination_flag=cached_res.hallucination_warning,
                 )
                 self.db.add(log_record)
                 await self.db.commit()
@@ -238,6 +248,10 @@ class QueryService:
                 output_tokens=0,
                 cost_usd=0.0,
                 latency_ms=latency_ms,
+                groundedness_score=1.0,
+                context_relevance_score=0.0,
+                answer_relevance_score=1.0,
+                hallucination_flag=False,
             )
             self.db.add(log_record)
             await self.db.commit()
@@ -256,6 +270,8 @@ class QueryService:
                 output_tokens=0,
                 cost_usd=0.0,
                 latency_ms=latency_ms,
+                groundedness_score=1.0,
+                hallucination_warning=False,
                 query_id=query_id,
             )
 
@@ -309,9 +325,16 @@ class QueryService:
             )
             citations = verification.citations
 
+        # 12. Run RAG Triad Evaluation & Hallucination Guardrails
+        eval_result = await self.evaluator.evaluate(
+            query=req.query,
+            context=built_context.context_text,
+            answer=llm_result.content,
+        )
+
         latency_ms = int((time.perf_counter() - start_time) * 1000)
 
-        # 12. Persist telemetry to query_logs and query_citations
+        # 13. Persist telemetry to query_logs and query_citations
         log_record = QueryLog(
             id=query_id,
             tenant_id=current_user.tenant_id,
@@ -327,6 +350,10 @@ class QueryService:
             output_tokens=llm_result.usage.completion_tokens,
             cost_usd=llm_result.cost_usd,
             latency_ms=latency_ms,
+            groundedness_score=eval_result.groundedness,
+            context_relevance_score=eval_result.context_relevance,
+            answer_relevance_score=eval_result.answer_relevance,
+            hallucination_flag=eval_result.hallucination_warning,
         )
         self.db.add(log_record)
 
@@ -356,11 +383,13 @@ class QueryService:
             output_tokens=llm_result.usage.completion_tokens,
             cost_usd=round(float(llm_result.cost_usd), 6),
             latency_ms=latency_ms,
+            groundedness_score=eval_result.groundedness,
+            hallucination_warning=eval_result.hallucination_warning,
             query_id=query_id,
         )
 
-        # 13. Populate Semantic Cache if not abstained
-        if not is_abstained and self.cache is not None:
+        # 14. Populate Semantic Cache if not abstained and passed guardrails
+        if not is_abstained and not eval_result.hallucination_warning and self.cache is not None:
             if query_embedding is None and self.embedder is not None:
                 query_embedding = await self.embedder.embed_query(req.query)
             await self.cache.set(

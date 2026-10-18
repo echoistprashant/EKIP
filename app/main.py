@@ -6,6 +6,7 @@ from app.api.v1.collections import router as collections_router
 from app.api.v1.documents import router as documents_router
 from app.api.v1.health import router as health_router
 from app.api.v1.query import router as query_router
+from app.api.v1.evaluation import router as evaluation_router
 
 
 def create_app() -> FastAPI:
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(collections_router, prefix="/api/v1")
     app.include_router(documents_router, prefix="/api/v1")
     app.include_router(query_router, prefix="/api/v1")
+    app.include_router(evaluation_router, prefix="/api/v1")
 
     return app
 

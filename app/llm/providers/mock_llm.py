@@ -23,6 +23,20 @@ class MockLLMClient:
         """Helper to test retry and circuit breaker logic."""
         self.forced_exception = exc
 
+    def _generate_response_text(self, prompt_text: str) -> str:
+        if self.default_response:
+            return self.default_response
+        if "<context>" in prompt_text and "</context>" in prompt_text:
+            context_block = prompt_text.split("<context>")[-1].split("</context>")[0].strip()
+            lines = [
+                line.strip()
+                for line in context_block.splitlines()
+                if line.strip() and not line.strip().startswith("[") and not line.strip().startswith("Document:")
+            ]
+            if lines:
+                return f"{lines[0].rstrip('.')} [1]."
+        return "Based on the provided documentation, the requested procedure is fully verified [1]."
+
     async def generate(self, req: LLMRequest) -> LLMResult:
         self.call_count += 1
 
@@ -35,11 +49,7 @@ class MockLLMClient:
         prompt_text = "".join(m.content for m in req.messages)
         input_tokens = max(10, len(prompt_text.split()))
 
-        # Determine response
-        if self.default_response:
-            response_text = self.default_response
-        else:
-            response_text = "Based on the provided documentation, the requested procedure is fully verified [1]."
+        response_text = self._generate_response_text(prompt_text)
 
         output_tokens = max(5, len(response_text.split()))
         latency_ms = int((time.monotonic() - start) * 1000)
@@ -65,10 +75,8 @@ class MockLLMClient:
         if self.forced_exception is not None:
             raise self.forced_exception
 
-        if self.default_response:
-            response_text = self.default_response
-        else:
-            response_text = "Based on the provided documentation, the requested procedure is fully verified [1]."
+        prompt_text = "".join(m.content for m in req.messages)
+        response_text = self._generate_response_text(prompt_text)
 
         words = response_text.split(" ")
         for idx, word in enumerate(words):

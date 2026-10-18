@@ -24,6 +24,10 @@ class QueryLog(Base):
     output_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     cost_usd: Mapped[float] = mapped_column(Numeric(12, 6), default=0.0, nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    groundedness_score: Mapped[float | None] = mapped_column(Numeric(4, 3), nullable=True)
+    context_relevance_score: Mapped[float | None] = mapped_column(Numeric(4, 3), nullable=True)
+    answer_relevance_score: Mapped[float | None] = mapped_column(Numeric(4, 3), nullable=True)
+    hallucination_flag: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )

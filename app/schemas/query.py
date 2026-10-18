@@ -54,4 +54,6 @@ class QueryResponse(BaseModel):
     output_tokens: int
     cost_usd: float
     latency_ms: int
+    groundedness_score: float | None = None
+    hallucination_warning: bool = False
     query_id: uuid.UUID | None = None
