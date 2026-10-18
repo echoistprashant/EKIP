@@ -1,6 +1,7 @@
+from collections.abc import AsyncIterator
 import logging
 from app.llm.circuit_breaker import CircuitBreaker
-from app.llm.client import LLMClient, LLMRequest, LLMResult
+from app.llm.client import LLMClient, LLMRequest, LLMResult, StreamChunk
 from app.llm.retry import execute_with_retry
 
 logger = logging.getLogger("ekip.llm.router")
@@ -9,7 +10,7 @@ logger = logging.getLogger("ekip.llm.router")
 class ResilientLLMRouter:
     """
     Manages primary and fallback LLM clients with Circuit Breakers and Retries.
-    Guarantees graceful failover without dropping user requests.
+    Guarantees graceful failover for both generate() and stream() requests.
     """
 
     def __init__(
@@ -62,5 +63,32 @@ class ResilientLLMRouter:
                 metadata=req.metadata,
             )
             return await self.fallback_client.generate(fallback_req)
+
+        raise RuntimeError("Primary LLM provider failed and no fallback client is configured.")
+
+    async def stream(self, req: LLMRequest) -> AsyncIterator[StreamChunk]:
+        # Check if primary provider is healthy
+        if self.primary_breaker.is_available():
+            try:
+                async for chunk in self.primary_client.stream(req):
+                    yield chunk
+                self.primary_breaker.record_success()
+                return
+            except Exception as e:
+                self.primary_breaker.record_failure()
+                logger.error(f"Primary provider streaming failed: {e}. Falling back...")
+
+        # Fallback streaming path
+        if self.fallback_client is not None:
+            fallback_req = LLMRequest(
+                messages=req.messages,
+                model=self.fallback_model,
+                temperature=req.temperature,
+                max_tokens=req.max_tokens,
+                metadata=req.metadata,
+            )
+            async for chunk in self.fallback_client.stream(fallback_req):
+                yield chunk
+            return
 
         raise RuntimeError("Primary LLM provider failed and no fallback client is configured.")

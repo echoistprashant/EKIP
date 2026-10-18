@@ -1,8 +1,10 @@
+from collections.abc import AsyncIterator
+import json
 import time
 import httpx
 from fastapi import HTTPException
 
-from app.llm.client import LLMRequest, LLMResult, TokenUsage
+from app.llm.client import LLMRequest, LLMResult, StreamChunk, TokenUsage
 from app.llm.cost import calculate_cost_usd
 
 
@@ -10,6 +12,7 @@ class GeminiLLMClient:
     """
     Google Gemini REST client supporting free-tier API keys.
     Converts universal ChatMessage format to Gemini Content objects.
+    Supports both generate() and stream() via Server-Sent Events (alt=sse).
     """
 
     def __init__(self, api_key: str, default_model: str = "gemini-1.5-flash", timeout_seconds: float = 30.0):
@@ -17,11 +20,8 @@ class GeminiLLMClient:
         self.default_model = default_model
         self.timeout = timeout_seconds
 
-    async def generate(self, req: LLMRequest) -> LLMResult:
+    def _build_payload(self, req: LLMRequest) -> tuple[str, dict]:
         model = req.model or self.default_model
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
-
-        # Convert universal messages into Gemini format
         contents = []
         system_instruction = None
 
@@ -42,6 +42,11 @@ class GeminiLLMClient:
         if system_instruction:
             payload["systemInstruction"] = system_instruction
 
+        return model, payload
+
+    async def generate(self, req: LLMRequest) -> LLMResult:
+        model, payload = self._build_payload(req)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
         start_time = time.monotonic()
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -93,3 +98,35 @@ class GeminiLLMClient:
             cost_usd=cost,
             finish_reason=finish_reason,
         )
+
+    async def stream(self, req: LLMRequest) -> AsyncIterator[StreamChunk]:
+        model, payload = self._build_payload(req)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse&key={self.api_key}"
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with client.stream("POST", url, json=payload) as response:
+                if response.status_code != 200:
+                    err_text = await response.aread()
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"Gemini API streaming error: {err_text.decode('utf-8', errors='ignore')}",
+                    )
+
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        data_str = line[6:].strip()
+                        if not data_str:
+                            continue
+                        try:
+                            chunk_data = json.loads(data_str)
+                            candidates = chunk_data.get("candidates", [])
+                            if candidates and "content" in candidates[0]:
+                                parts = candidates[0]["content"].get("parts", [])
+                                for p in parts:
+                                    text_part = p.get("text", "")
+                                    if text_part:
+                                        yield StreamChunk(text=text_part)
+                        except Exception:
+                            continue
+
+        yield StreamChunk(text="", finish_reason="stop")

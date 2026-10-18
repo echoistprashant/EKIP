@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -13,6 +14,13 @@ class TokenUsage:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+
+
+@dataclass
+class StreamChunk:
+    text: str
+    finish_reason: str | None = None
+    usage: TokenUsage | None = None
 
 
 @dataclass
@@ -39,4 +47,8 @@ class LLMClient(Protocol):
 
     async def generate(self, req: LLMRequest) -> LLMResult:
         """Execute non-streaming completion with token and cost accounting."""
+        ...
+
+    def stream(self, req: LLMRequest) -> AsyncIterator[StreamChunk]:
+        """Execute streaming completion yielding chunks as tokens arrive."""
         ...

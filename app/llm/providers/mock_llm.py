@@ -1,7 +1,9 @@
+import asyncio
+from collections.abc import AsyncIterator
 import time
 from typing import Any
 
-from app.llm.client import LLMRequest, LLMResult, TokenUsage
+from app.llm.client import LLMRequest, LLMResult, StreamChunk, TokenUsage
 from app.llm.cost import calculate_cost_usd
 
 
@@ -9,6 +11,7 @@ class MockLLMClient:
     """
     Deterministic Mock LLM client for tests and offline operation.
     Zero API cost, predictable output, with simulated latency and token usage.
+    Supports both non-streaming generate() and streaming stream().
     """
 
     def __init__(self, default_response: str | None = None):
@@ -54,4 +57,35 @@ class MockLLMClient:
             latency_ms=latency_ms,
             cost_usd=cost,
             finish_reason="stop",
+        )
+
+    async def stream(self, req: LLMRequest) -> AsyncIterator[StreamChunk]:
+        self.call_count += 1
+
+        if self.forced_exception is not None:
+            raise self.forced_exception
+
+        if self.default_response:
+            response_text = self.default_response
+        else:
+            response_text = "Based on the provided documentation, the requested procedure is fully verified [1]."
+
+        words = response_text.split(" ")
+        for idx, word in enumerate(words):
+            token_str = word if idx == len(words) - 1 else word + " "
+            yield StreamChunk(text=token_str)
+            await asyncio.sleep(0)
+
+        prompt_text = "".join(m.content for m in req.messages)
+        input_tokens = max(10, len(prompt_text.split()))
+        output_tokens = max(5, len(words))
+
+        yield StreamChunk(
+            text="",
+            finish_reason="stop",
+            usage=TokenUsage(
+                prompt_tokens=input_tokens,
+                completion_tokens=output_tokens,
+                total_tokens=input_tokens + output_tokens,
+            ),
         )

@@ -28,6 +28,31 @@ async def ask_rag(
     return await service.execute_query(req=req, current_user=current_user)
 
 
+@router.post("/stream")
+async def ask_rag_stream(
+    req: QueryRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Real-time streaming Grounded RAG Generation via Server-Sent Events (SSE).
+    Streams source references, token-by-token generation, and final verified citations.
+    """
+    from fastapi.responses import StreamingResponse
+    from app.services.streaming_service import StreamingQueryService
+
+    service = StreamingQueryService(db)
+    return StreamingResponse(
+        service.stream_query(req=req, current_user=current_user),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.post("/retrieve", response_model=RetrieveResponse)
 async def retrieve_candidates(
     req: RetrieveRequest,

@@ -1,7 +1,7 @@
 from functools import lru_cache
 
 from app.core.config import settings
-from app.llm.client import ChatMessage, LLMClient, LLMRequest, LLMResult, TokenUsage
+from app.llm.client import ChatMessage, LLMClient, LLMRequest, LLMResult, StreamChunk, TokenUsage
 from app.llm.providers.gemini_llm import GeminiLLMClient
 from app.llm.providers.mock_llm import MockLLMClient
 from app.llm.router import ResilientLLMRouter
@@ -33,6 +33,7 @@ def get_llm_client() -> LLMClient:
 __all__ = [
     "ChatMessage",
     "TokenUsage",
+    "StreamChunk",
     "LLMRequest",
     "LLMResult",
     "LLMClient",
