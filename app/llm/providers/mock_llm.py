@@ -28,6 +28,34 @@ class MockLLMClient:
             return self.default_response
         if "<context>" in prompt_text and "</context>" in prompt_text:
             context_block = prompt_text.split("<context>")[-1].split("</context>")[0].strip()
+
+            # Abstain if question is explicitly ungrounded
+            if "<question>" in prompt_text and "</question>" in prompt_text:
+                q_text = prompt_text.split("<question>")[-1].split("</question>")[0].strip().lower()
+                q_words = [
+                    w.strip("?,.!\"'")
+                    for w in q_text.split()
+                    if len(w) > 3
+                    and w
+                    not in {
+                        "what",
+                        "when",
+                        "where",
+                        "which",
+                        "whose",
+                        "does",
+                        "have",
+                        "this",
+                        "that",
+                        "tell",
+                        "much",
+                        "many",
+                        "explain",
+                    }
+                ]
+                if q_words and not any(w in context_block.lower() for w in q_words):
+                    return "I do not have enough information in the provided documents to answer this question."
+
             lines = [
                 line.strip()
                 for line in context_block.splitlines()

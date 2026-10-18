@@ -15,7 +15,7 @@ class GeminiLLMClient:
     Supports both generate() and stream() via Server-Sent Events (alt=sse).
     """
 
-    def __init__(self, api_key: str, default_model: str = "gemini-flash-latest", timeout_seconds: float = 30.0):
+    def __init__(self, api_key: str, default_model: str = "gemini-flash-lite-latest", timeout_seconds: float = 30.0):
         self.api_key = api_key
         self.default_model = default_model
         self.timeout = timeout_seconds
