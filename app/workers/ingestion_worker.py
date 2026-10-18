@@ -6,6 +6,7 @@ from app.models.chunk import Chunk
 from app.models.document import Document
 from app.rag.chunking.structural import StructuralChunker
 from app.rag.cleaning import document_cleaner
+from app.rag.embeddings.factory import get_embedder
 from app.rag.parsing.registry import parser_registry
 from app.repositories.chunks_repo import ChunksRepository
 from app.repositories.documents_repo import DocumentsRepository
@@ -26,8 +27,9 @@ async def process_document_pipeline(
     1. Parse bytes into structured Elements
     2. Clean repetitive headers/footers
     3. Structural chunking with Contextual Headers
-    4. Atomic batch insertion of Chunks into PostgreSQL
-    5. Update Document status to 'indexed'
+    4. Compute 1024-d Vector Embeddings
+    5. Atomic batch insertion of Chunks into PostgreSQL (with HNSW vector index)
+    6. Update Document status to 'indexed'
     """
     docs_repo = DocumentsRepository(db)
     chunks_repo = ChunksRepository(db)
@@ -52,9 +54,12 @@ async def process_document_pipeline(
         chunker = StructuralChunker(max_tokens=400, overlap_tokens=50)
         chunks_data = chunker.chunk(cleaned_elements, doc.title)
 
-        # Step 4: Convert to DB Chunk models
-        # Note: Vector embeddings will be calculated in Phase 5.
-        # Storing placeholder 1024-d zero vector to satisfy NOT NULL HNSW schema constraint.
+        # Step 4: Compute Real Vector Embeddings
+        embedder = get_embedder()
+        chunk_texts = [c.content for c in chunks_data]
+        embeddings = await embedder.embed_documents(chunk_texts)
+
+        # Step 5: Convert to DB Chunk models
         db_chunks = [
             Chunk(
                 tenant_id=tenant_id,
@@ -68,13 +73,13 @@ async def process_document_pipeline(
                 page_end=c.page_end,
                 section_path=c.section_path,
                 metadata_={"source_file": filename},
-                embedding=[0.0] * 1024,
-                embedding_model="pending",
+                embedding=emb,
+                embedding_model=embedder.model_name,
             )
-            for c in chunks_data
+            for c, emb in zip(chunks_data, embeddings)
         ]
 
-        # Step 5: Persist Chunks and update status
+        # Step 6: Persist Chunks and update status
         await chunks_repo.insert_chunks(db_chunks)
         doc.status = "indexed"
         doc.error_code = None
@@ -82,7 +87,7 @@ async def process_document_pipeline(
 
         logger.info(
             "Document ingestion completed",
-            extra={"document_id": str(doc.id), "chunk_count": len(db_chunks)},
+            extra={"document_id": str(doc.id), "chunk_count": len(db_chunks), "embedder": embedder.model_name},
         )
         return len(db_chunks)
 

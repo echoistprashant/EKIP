@@ -36,3 +36,6 @@ bcrypt
 # Ingestion & Parsing
 pypdf
 markdown-it-py
+
+# Embeddings & Vectors
+fastembed

@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # Vector Embeddings
+    EMBEDDING_PROVIDER: Literal["mock", "fastembed"] = "mock"
+    EMBEDDING_MODEL: str = "BAAI/bge-large-en-v1.5"
+    EMBEDDING_DIM: int = 1024
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
