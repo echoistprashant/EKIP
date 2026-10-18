@@ -689,14 +689,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     async function handleCreateCollection(e) {
       e.preventDefault();
-      const name = document.getElementById('new-collection-name').value;
+      const name = document.getElementById('new-collection-name').value.trim();
+      if (!name) return;
       try {
         const res = await fetch('/api/v1/collections', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
           body: JSON.stringify({ name })
         });
-        if (!res.ok) throw new Error('Failed to create collection');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Failed to create collection');
+        }
         closeCreateCollectionModal();
         document.getElementById('new-collection-name').value = '';
         await loadCollections();

@@ -1,5 +1,6 @@
 import uuid
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_role
@@ -34,4 +35,11 @@ async def create_collection(
         tenant_id=current_user.tenant_id,
         name=req.name,
     )
-    return await repo.create(collection)
+    try:
+        return await repo.create(collection)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"A collection named '{req.name}' already exists in your workspace.",
+        )
