@@ -699,7 +699,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 if (currentEvent === 'sources') {
                   try { sources = JSON.parse(dataStr); } catch (_) {}
                 } else if (currentEvent === 'token') {
-                  answerText += dataStr;
+                  let tokenText = dataStr;
+                  try {
+                    const parsed = JSON.parse(dataStr);
+                    if (parsed && parsed.text !== undefined) {
+                      tokenText = parsed.text;
+                    }
+                  } catch (_) {}
+                  answerText += tokenText;
                   updateAssistantText(assistantMessageId, answerText);
                 } else if (currentEvent === 'abstention') {
                   try {

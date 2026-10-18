@@ -31,7 +31,11 @@ class MockLLMClient:
             lines = [
                 line.strip()
                 for line in context_block.splitlines()
-                if line.strip() and not line.strip().startswith("[") and not line.strip().startswith("Document:")
+                if line.strip()
+                and not line.strip().startswith("<")
+                and not line.strip().startswith("[")
+                and not line.strip().startswith("Document:")
+                and len(line.strip()) > 3
             ]
             if lines:
                 return f"{lines[0].rstrip('.')} [1]."
