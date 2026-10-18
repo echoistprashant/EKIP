@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "BAAI/bge-large-en-v1.5"
     EMBEDDING_DIM: int = 1024
 
+    # LLM Generation & Resilience
+    LLM_PROVIDER: Literal["mock", "gemini"] = "mock"
+    LLM_MODEL: str = "gemini-1.5-flash"
+    GEMINI_API_KEY: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
