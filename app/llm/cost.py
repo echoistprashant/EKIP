@@ -2,6 +2,7 @@
 # Kept in config/module to avoid hardcoding prices in business logic
 MODEL_PRICING: dict[str, dict[str, float]] = {
     # Google Gemini Models (Free tier available, standard paid rates)
+    "gemini-flash-latest": {"input_per_mtok": 0.0, "output_per_mtok": 0.0},
     "gemini-1.5-flash": {"input_per_mtok": 0.075, "output_per_mtok": 0.30},
     "gemini-2.0-flash": {"input_per_mtok": 0.10, "output_per_mtok": 0.40},
     # Groq / Open Models (Free or ultra-cheap)

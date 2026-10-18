@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     # LLM Generation & Resilience
     LLM_PROVIDER: Literal["mock", "gemini"] = "mock"
-    LLM_MODEL: str = "gemini-1.5-flash"
+    LLM_MODEL: str = "gemini-flash-latest"
     GEMINI_API_KEY: str | None = None
 
     # Reranking & Context Compression
