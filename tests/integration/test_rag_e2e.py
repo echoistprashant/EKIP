@@ -117,6 +117,32 @@ All communication must occur on the dedicated war-room Slack channel.
         assert rerank_data["count"] <= 2
         assert rerank_data["candidates"][0]["retrieval_method"] == "cross_encoder_reranked"
 
+        # 4c. Test Query Transformation (HyDE strategy)
+        hyde_res = await client.post(
+            "/api/v1/query",
+            headers=headers_a,
+            json={
+                "query": "Severity 1 escalation timeline",
+                "collection_ids": [col_id],
+                "query_transformation": "hyde",
+                "top_k": 5,
+            },
+        )
+        assert hyde_res.status_code == 200
+        hyde_data = hyde_res.json()
+        assert hyde_data["abstained"] is False
+        assert hyde_data["query_transformation_strategy"] == "hyde"
+        assert hyde_data["rewritten_query"] is not None
+
+        # Verify DB has rewritten_query persisted
+        hyde_uuid = uuid.UUID(hyde_data["query_id"])
+        async with AsyncSessionLocal() as session:
+            stmt = select(QueryLog).where(QueryLog.id == hyde_uuid)
+            res = await session.execute(stmt)
+            log_item = res.scalar_one_or_none()
+            assert log_item is not None
+            assert log_item.rewritten_query is not None
+
         # 5. Abstention Test: Ask question with zero matching context
         abstain_res = await client.post(
             "/api/v1/query",

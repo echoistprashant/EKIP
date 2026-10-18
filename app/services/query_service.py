@@ -1,3 +1,4 @@
+import asyncio
 import time
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,23 +11,30 @@ from app.rag.citations import CitationVerifier
 from app.rag.compression import ExtractiveSentenceCompressor, get_compressor
 from app.rag.context_builder import ContextBuilder
 from app.rag.prompts.manager import PromptManager
+from app.rag.query_transform import (
+    BaseQueryTransformer,
+    QueryTransformationResult,
+    get_query_transformer,
+)
 from app.rag.rerank import BaseReranker, get_reranker
 from app.rag.retrieval.base import AccessScope, Candidate
 from app.rag.retrieval.hybrid import HybridRetriever
+from app.rag.retrieval.rrf import multi_list_rrf
 from app.schemas.query import CitationItem, QueryRequest, QueryResponse
 
 
 class QueryService:
     """
     Orchestrates end-to-end Grounded RAG Generation:
-    1. Hybrid Candidate Retrieval (Dense HNSW + Lexical GIN with RRF)
-    2. Out-of-domain / zero candidate abstention gate
-    3. Stage 2: Deep Cross-Encoder Reranking (top_k -> top_n)
-    4. Context Compression: Extractive sentence window trimming
-    5. Token-budgeted, Lost-in-the-Middle XML context assembly
-    6. Resilient LLM generation with versioned grounded prompts
-    7. Sentence-level citation extraction and grounding verification
-    8. Audit and telemetry persistence (query_logs + query_citations)
+    1. Query Transformation (HyDE / Multi-Query Expansion / Rewriting)
+    2. Multi-list or Hybrid Retrieval (Dense HNSW + Lexical GIN with RRF)
+    3. Out-of-domain / zero candidate abstention gate
+    4. Stage 2: Deep Cross-Encoder Reranking (top_k -> top_n)
+    5. Context Compression: Extractive sentence window trimming
+    6. Token-budgeted, Lost-in-the-Middle XML context assembly
+    7. Resilient LLM generation with versioned grounded prompts
+    8. Sentence-level citation extraction and grounding verification
+    9. Audit and telemetry persistence (query_logs + query_citations)
     """
 
     def __init__(
@@ -35,6 +43,7 @@ class QueryService:
         retriever: HybridRetriever | None = None,
         reranker: BaseReranker | None = None,
         compressor: ExtractiveSentenceCompressor | None = None,
+        transformer: BaseQueryTransformer | None = None,
         llm_client: LLMClient | None = None,
         context_builder: ContextBuilder | None = None,
         prompt_manager: PromptManager | None = None,
@@ -44,10 +53,76 @@ class QueryService:
         self.retriever = retriever or HybridRetriever(db)
         self.reranker = reranker or get_reranker()
         self.compressor = compressor or get_compressor()
+        self.transformer = transformer
         self.llm_client = llm_client or get_llm_client()
         self.context_builder = context_builder or ContextBuilder()
         self.prompt_manager = prompt_manager or PromptManager()
         self.citation_verifier = citation_verifier or CitationVerifier()
+
+    async def _execute_retrieval_with_transformation(
+        self,
+        req: QueryRequest,
+        scope: AccessScope,
+    ) -> tuple[list[Candidate], QueryTransformationResult]:
+        strategy = (
+            req.query_transformation
+            if req.query_transformation != "none"
+            else settings.DEFAULT_QUERY_TRANSFORMATION
+        )
+
+        transformer = self.transformer or get_query_transformer(strategy)
+        if transformer is None or strategy == "none":
+            candidates = await self.retriever.retrieve(
+                query=req.query,
+                scope=scope,
+                top_k=req.top_k,
+            )
+            return candidates, QueryTransformationResult(
+                original_query=req.query,
+                transformed_query=req.query,
+                expanded_queries=[req.query],
+                strategy_used="none",
+            )
+
+        # Run query transformation
+        transform_result = await transformer.transform(req.query)
+
+        if transform_result.strategy_used == "hyde" and transform_result.hypothetical_document:
+            # HyDE: use hypothetical doc for Dense vector search, original query for Lexical FTS
+            candidates = await self.retriever.retrieve(
+                query=req.query,
+                scope=scope,
+                top_k=req.top_k,
+                dense_query=transform_result.hypothetical_document,
+                lexical_query=req.query,
+            )
+        elif transform_result.strategy_used == "expansion" and len(transform_result.expanded_queries) > 1:
+            # Multi-Query Expansion: retrieve for all variations concurrently, fuse via Multi-List RRF
+            tasks = [
+                self.retriever.retrieve(
+                    query=q,
+                    scope=scope,
+                    top_k=req.top_k,
+                )
+                for q in transform_result.expanded_queries
+            ]
+            cand_lists = await asyncio.gather(*tasks)
+            candidates = multi_list_rrf(cand_lists, k=60)[: req.top_k]
+        elif transform_result.strategy_used == "rewrite":
+            # Rewritten Query: execute retrieval with rewritten query
+            candidates = await self.retriever.retrieve(
+                query=transform_result.transformed_query,
+                scope=scope,
+                top_k=req.top_k,
+            )
+        else:
+            candidates = await self.retriever.retrieve(
+                query=req.query,
+                scope=scope,
+                top_k=req.top_k,
+            )
+
+        return candidates, transform_result
 
     async def execute_query(
         self,
@@ -65,11 +140,14 @@ class QueryService:
             collection_ids=req.collection_ids,
         )
 
-        # 2. Stage 1: Retrieve raw candidates via Hybrid Search (Dense + Lexical + RRF)
-        candidates = await self.retriever.retrieve(
-            query=req.query,
+        # 2. Stage 1: Query Transformation & Hybrid Candidate Retrieval
+        candidates, transform_res = await self._execute_retrieval_with_transformation(
+            req=req,
             scope=scope,
-            top_k=req.top_k,
+        )
+
+        effective_rewritten = (
+            transform_res.transformed_query if transform_res.strategy_used != "none" else None
         )
 
         # 3. Abstention Gate: Zero candidates found
@@ -85,7 +163,7 @@ class QueryService:
                 tenant_id=current_user.tenant_id,
                 user_id=current_user.id,
                 question=req.query,
-                rewritten_query=None,
+                rewritten_query=effective_rewritten,
                 answer=abstention_answer,
                 abstained=True,
                 trace_id=trace_id,
@@ -101,6 +179,8 @@ class QueryService:
 
             return QueryResponse(
                 query=req.query,
+                rewritten_query=effective_rewritten,
+                query_transformation_strategy=transform_res.strategy_used,
                 answer=abstention_answer,
                 citations=[],
                 abstained=True,
@@ -171,7 +251,7 @@ class QueryService:
             tenant_id=current_user.tenant_id,
             user_id=current_user.id,
             question=req.query,
-            rewritten_query=None,
+            rewritten_query=effective_rewritten,
             answer=llm_result.content,
             abstained=is_abstained,
             trace_id=trace_id,
@@ -198,6 +278,8 @@ class QueryService:
 
         return QueryResponse(
             query=req.query,
+            rewritten_query=effective_rewritten,
+            query_transformation_strategy=transform_res.strategy_used,
             answer=llm_result.content,
             citations=citations,
             abstained=is_abstained,

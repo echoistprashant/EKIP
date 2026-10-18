@@ -11,6 +11,10 @@ class QueryRequest(BaseModel):
     rerank: bool = Field(default=True, description="Whether to apply Stage 2 Cross-Encoder reranking.")
     top_n: int = Field(default=5, ge=1, le=20, description="Number of candidates to keep after reranking.")
     compress_context: bool = Field(default=True, description="Whether to apply extractive sentence compression.")
+    query_transformation: str = Field(
+        default="none",
+        description="Query transformation strategy: 'none', 'hyde', 'expansion', 'rewrite'.",
+    )
     temperature: float = Field(default=0.0, ge=0.0, le=1.0, description="LLM sampling temperature.")
     max_context_tokens: int = Field(
         default=3000, ge=500, le=16000, description="Token budget for context injection."
@@ -34,6 +38,8 @@ class QueryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     query: str
+    rewritten_query: str | None = None
+    query_transformation_strategy: str = "none"
     answer: str
     citations: list[CitationItem]
     abstained: bool

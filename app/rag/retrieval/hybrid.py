@@ -11,6 +11,7 @@ class HybridRetriever:
     """
     Executes Dense ANN search and Lexical Full-Text Search concurrently,
     then merges rankings using Reciprocal Rank Fusion (RRF).
+    Supports optional separate dense and lexical queries (crucial for HyDE).
     """
 
     def __init__(self, db: AsyncSession):
@@ -24,19 +25,24 @@ class HybridRetriever:
         scope: AccessScope,
         top_k: int = 20,
         candidate_pool_size: int = 50,
+        dense_query: str | None = None,
+        lexical_query: str | None = None,
     ) -> list[Candidate]:
         """
         1. Concurrently run Dense and Lexical search with candidate_pool_size.
         2. Merge both ranked lists via Reciprocal Rank Fusion.
         3. Return top_k fused candidates.
         """
+        effective_dense_query = dense_query or query
+        effective_lexical_query = lexical_query or query
+
         dense_task = self.dense_retriever.retrieve(
-            query=query,
+            query=effective_dense_query,
             scope=scope,
             top_k=candidate_pool_size,
         )
         lexical_task = self.lexical_retriever.retrieve(
-            query=query,
+            query=effective_lexical_query,
             scope=scope,
             top_k=candidate_pool_size,
         )

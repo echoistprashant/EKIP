@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     RERANK_TOP_N: int = 5
     ENABLE_CONTEXT_COMPRESSION: bool = True
 
+    # Query Transformation
+    DEFAULT_QUERY_TRANSFORMATION: Literal["none", "hyde", "expansion", "rewrite", "mock"] = "none"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
