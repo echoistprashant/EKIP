@@ -437,15 +437,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3.5 text-xs font-medium">
         <div id="tenant-field" class="hidden">
           <label class="block text-slate-600 mb-1">Tenant Organization Name</label>
-          <input type="text" id="auth-tenant" placeholder="Acme Corporation" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
+          <input type="text" id="auth-tenant" autocomplete="organization" placeholder="Acme Corporation" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
         </div>
         <div>
           <label class="block text-slate-600 mb-1">Work Email</label>
-          <input type="email" id="auth-email" required placeholder="admin@enterprise.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
+          <input type="email" id="auth-email" autocomplete="email" required placeholder="admin@enterprise.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
         </div>
         <div>
           <label class="block text-slate-600 mb-1">Password</label>
-          <input type="password" id="auth-password" required placeholder="••••••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
+          <input type="password" id="auth-password" autocomplete="current-password" required placeholder="••••••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
         </div>
 
         <button type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-500/20 transition mt-2">
@@ -658,6 +658,20 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       checkAuthStatus();
     }
 
+    function handleUnauthorized(message) {
+      localStorage.removeItem('ekip_token');
+      localStorage.removeItem('ekip_tenant');
+      localStorage.removeItem('ekip_role');
+      authToken = null;
+      authTenant = null;
+      authRole = null;
+      checkAuthStatus();
+      openAuthModal();
+      if (message) {
+        console.warn(message);
+      }
+    }
+
     function logout() {
       localStorage.clear();
       authToken = null;
@@ -672,12 +686,19 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         const res = await fetch('/api/v1/collections', {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
+        if (res.status === 401) {
+          handleUnauthorized('Session expired. Please sign in again.');
+          return;
+        }
+        if (!res.ok) return;
         const collections = await res.json();
+        if (!Array.isArray(collections)) return;
         const selects = [document.getElementById('chat-collection-select'), document.getElementById('upload-collection-select')];
         selects.forEach(select => {
+          if (!select) return;
           select.innerHTML = collections.length === 0 
             ? '<option value="">No collections found - please create one</option>' 
-            : collections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            : collections.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
         });
       } catch (e) {
         console.error('Failed to load collections', e);
@@ -691,12 +712,20 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       e.preventDefault();
       const name = document.getElementById('new-collection-name').value.trim();
       if (!name) return;
+      if (!authToken) {
+        openAuthModal();
+        return;
+      }
       try {
         const res = await fetch('/api/v1/collections', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
           body: JSON.stringify({ name })
         });
+        if (res.status === 401) {
+          handleUnauthorized('Session expired. Please sign in again.');
+          return;
+        }
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.detail || 'Failed to create collection');
@@ -972,6 +1001,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           headers: { 'Authorization': `Bearer ${authToken}` },
           body: formData
         });
+        if (res.status === 401) {
+          handleUnauthorized('Session expired. Please sign in again.');
+          return;
+        }
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Upload failed');
+        }
         const doc = await res.json();
         const jobId = res.headers.get('X-Job-ID');
 
@@ -1036,8 +1073,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         const res = await fetch('/api/v1/documents', {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
+        if (res.status === 401) {
+          handleUnauthorized('Session expired. Please sign in again.');
+          return;
+        }
+        if (!res.ok) return;
         const docs = await res.json();
+        if (!Array.isArray(docs)) return;
         const tbody = document.getElementById('documents-table-body');
+        if (!tbody) return;
         if (docs.length === 0) {
           tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-slate-400 font-medium">No documents ingested yet.</td></tr>';
           return;
@@ -1048,7 +1092,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
               <i class="fa-solid fa-file-lines text-brand-600"></i> ${escapeHtml(d.title)}
             </td>
             <td class="px-6 py-3.5 text-slate-500 font-mono">${escapeHtml(d.mime_type)}</td>
-            <td class="px-6 py-3.5 font-mono text-slate-400">${d.content_hash.substring(0, 10)}...</td>
+            <td class="px-6 py-3.5 font-mono text-slate-400">${(d.content_hash || '').substring(0, 10)}...</td>
             <td class="px-6 py-3.5">
               <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${d.status === 'indexed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">${d.status}</span>
             </td>
@@ -1067,34 +1111,41 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         const res = await fetch('/api/v1/analytics/overview', {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
+        if (res.status === 401) {
+          handleUnauthorized('Session expired. Please sign in again.');
+          return;
+        }
+        if (!res.ok) return;
         const data = await res.json();
+        if (!data || data.total_queries === undefined) return;
 
         document.getElementById('kpi-queries').innerText = data.total_queries;
-        document.getElementById('kpi-cache-rate').innerText = (data.cache_hit_rate * 100).toFixed(1) + '%';
-        document.getElementById('kpi-latency').innerText = data.average_latency_ms.toFixed(0) + ' ms';
-        document.getElementById('kpi-cost').innerText = '$' + data.total_cost_usd.toFixed(4);
-        document.getElementById('kpi-hallucination').innerText = (data.hallucination_rate * 100).toFixed(1) + '%';
-        document.getElementById('kpi-satisfaction').innerText = (data.positive_feedback_rate * 100).toFixed(0) + '%';
+        document.getElementById('kpi-cache-rate').innerText = ((data.cache_hit_rate || 0) * 100).toFixed(1) + '%';
+        document.getElementById('kpi-latency').innerText = (data.average_latency_ms || 0).toFixed(0) + ' ms';
+        document.getElementById('kpi-cost').innerText = '$' + (data.total_cost_usd || 0).toFixed(4);
+        document.getElementById('kpi-hallucination').innerText = ((data.hallucination_rate || 0) * 100).toFixed(1) + '%';
+        document.getElementById('kpi-satisfaction').innerText = ((data.positive_feedback_rate || 0) * 100).toFixed(0) + '%';
 
-        document.getElementById('score-groundedness').innerText = data.average_groundedness.toFixed(2);
-        document.getElementById('bar-groundedness').style.width = (data.average_groundedness * 100) + '%';
+        document.getElementById('score-groundedness').innerText = (data.average_groundedness || 1).toFixed(2);
+        document.getElementById('bar-groundedness').style.width = ((data.average_groundedness || 1) * 100) + '%';
 
-        document.getElementById('score-context').innerText = data.average_context_relevance.toFixed(2);
-        document.getElementById('bar-context').style.width = (data.average_context_relevance * 100) + '%';
+        document.getElementById('score-context').innerText = (data.average_context_relevance || 1).toFixed(2);
+        document.getElementById('bar-context').style.width = ((data.average_context_relevance || 1) * 100) + '%';
 
-        document.getElementById('score-answer').innerText = data.average_answer_relevance.toFixed(2);
-        document.getElementById('bar-answer').style.width = (data.average_answer_relevance * 100) + '%';
+        document.getElementById('score-answer').innerText = (data.average_answer_relevance || 1).toFixed(2);
+        document.getElementById('bar-answer').style.width = ((data.average_answer_relevance || 1) * 100) + '%';
 
         const modelsTable = document.getElementById('models-table-body');
-        const models = Object.keys(data.model_breakdown);
+        const breakdown = data.model_breakdown || {};
+        const models = Object.keys(breakdown);
         if (models.length === 0) {
           modelsTable.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-slate-400">No query data recorded yet.</td></tr>';
         } else {
           modelsTable.innerHTML = models.map(m => `
             <tr>
               <td class="px-6 py-3.5 font-bold text-slate-900">${escapeHtml(m)}</td>
-              <td class="px-6 py-3.5 font-mono text-slate-700">${data.model_breakdown[m]}</td>
-              <td class="px-6 py-3.5 font-mono text-emerald-600 font-bold">$${(data.cost_by_model[m] || 0).toFixed(5)}</td>
+              <td class="px-6 py-3.5 font-mono text-slate-700">${breakdown[m]}</td>
+              <td class="px-6 py-3.5 font-mono text-emerald-600 font-bold">$${((data.cost_by_model && data.cost_by_model[m]) || 0).toFixed(5)}</td>
               <td class="px-6 py-3.5 text-brand-600 font-bold">${m.includes('cache') ? 'Sub-1ms O(1)' : 'Full Pipeline'}</td>
             </tr>
           `).join('');

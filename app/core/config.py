@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # Authentication & Security
     JWT_SECRET: str = "ekip-super-secure-jwt-secret-key-change-in-production-2026"
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
 
     # Vector Embeddings
     EMBEDDING_PROVIDER: Literal["mock", "fastembed"] = "mock"
