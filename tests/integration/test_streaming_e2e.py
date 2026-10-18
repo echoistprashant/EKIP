@@ -103,3 +103,34 @@ Streaming responses must maintain latency under 200ms for first token arrival.
                     abstain_events.append(line[7:].strip())
 
         assert "abstention" in abstain_events
+
+        # 5. Stream Repeated Query (Hits Semantic Cache)
+        cached_done_data = None
+        async with client.stream(
+            "POST",
+            "/api/v1/query/stream",
+            headers=headers,
+            json={
+                "query": "What is the first token arrival latency guarantee?",
+                "collection_ids": [col_id],
+                "top_k": 5,
+            },
+        ) as response:
+            assert response.status_code == 200
+            current_event = None
+            async for line in response.aiter_lines():
+                if line.startswith("event: "):
+                    current_event = line[7:].strip()
+                elif line.startswith("data: ") and current_event == "done":
+                    import json
+                    cached_done_data = json.loads(line[6:].strip())
+
+        assert cached_done_data is not None
+        assert cached_done_data.get("cached") is True
+
+        # 6. Verify Telemetry reflects the streaming cache hit
+        overview_res = await client.get("/api/v1/analytics/overview", headers=headers)
+        assert overview_res.status_code == 200
+        overview = overview_res.json()
+        assert overview["total_cached_queries"] >= 1
+        assert overview["cache_hit_rate"] > 0.0

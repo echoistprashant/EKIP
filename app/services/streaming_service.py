@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cache import BaseSemanticCache, get_semantic_cache
 from app.core.config import settings
+from app.evaluation import RAGTriadEvaluator, get_evaluator
 from app.llm import LLMClient, LLMRequest, get_llm_client
 from app.models.query_log import QueryCitation, QueryLog
 from app.models.user import User
@@ -55,6 +56,7 @@ class StreamingQueryService:
         context_builder: ContextBuilder | None = None,
         prompt_manager: PromptManager | None = None,
         citation_verifier: CitationVerifier | None = None,
+        evaluator: RAGTriadEvaluator | None = None,
     ) -> None:
         self.db = db
         self.retriever = retriever or HybridRetriever(db)
@@ -67,6 +69,7 @@ class StreamingQueryService:
         self.context_builder = context_builder or ContextBuilder()
         self.prompt_manager = prompt_manager or PromptManager()
         self.citation_verifier = citation_verifier or CitationVerifier()
+        self.evaluator = evaluator or get_evaluator()
 
     async def stream_query(
         self,
@@ -104,6 +107,40 @@ class StreamingQueryService:
                 hit_latency = int((time.perf_counter() - start_time) * 1000)
                 cached = cache_hit.response
 
+                # Persist cache-hit telemetry log to query_logs
+                log_record = QueryLog(
+                    id=query_id,
+                    tenant_id=current_user.tenant_id,
+                    user_id=current_user.id,
+                    question=req.query,
+                    rewritten_query=getattr(cached, "rewritten_query", None) or req.query,
+                    answer=cached.answer,
+                    abstained=cached.abstained,
+                    trace_id=trace_id,
+                    prompt_version=getattr(cached, "prompt_version", "v1.0") or "v1.0",
+                    model=f"{getattr(cached, 'model', None) or settings.LLM_MODEL}-cache",
+                    input_tokens=0,
+                    output_tokens=0,
+                    cost_usd=0.0,
+                    latency_ms=hit_latency,
+                    groundedness_score=getattr(cached, "groundedness_score", 1.0) or 1.0,
+                    context_relevance_score=1.0,
+                    answer_relevance_score=1.0,
+                    hallucination_flag=getattr(cached, "hallucination_warning", False) or False,
+                )
+                self.db.add(log_record)
+
+                for rank_idx, cit in enumerate(cached.citations, start=1):
+                    cit_record = QueryCitation(
+                        query_id=query_id,
+                        chunk_id=cit.chunk_id,
+                        rank=rank_idx,
+                        rerank_score=cit.relevance_score,
+                    )
+                    self.db.add(cit_record)
+
+                await self.db.commit()
+
                 # Emit cached sources
                 yield sse_event("sources", {
                     "sources": [c.model_dump() for c in cached.citations],
@@ -128,6 +165,8 @@ class StreamingQueryService:
                     "input_tokens": 0,
                     "output_tokens": 0,
                     "cost_usd": 0.0,
+                    "groundedness_score": getattr(cached, "groundedness_score", 1.0) or 1.0,
+                    "hallucination_warning": getattr(cached, "hallucination_warning", False) or False,
                 })
                 return
 
@@ -259,7 +298,24 @@ class StreamingQueryService:
         prompt_tokens = token_usage.prompt_tokens if token_usage else len(messages[1].content.split())
         completion_tokens = token_usage.completion_tokens if token_usage else len(full_answer.split())
 
-        # 8. Persist Telemetry to DB
+        # 8. Run RAG Triad Evaluation & Hallucination Guardrails
+        if not is_abstained:
+            eval_result = await self.evaluator.evaluate(
+                query=req.query,
+                context=built_context.context_text,
+                answer=full_answer,
+            )
+            groundedness_score = eval_result.groundedness
+            context_relevance_score = eval_result.context_relevance
+            answer_relevance_score = eval_result.answer_relevance
+            hallucination_flag = eval_result.hallucination_warning
+        else:
+            groundedness_score = 1.0
+            context_relevance_score = 0.0
+            answer_relevance_score = 1.0
+            hallucination_flag = False
+
+        # Persist Telemetry to DB
         log_record = QueryLog(
             id=query_id,
             tenant_id=current_user.tenant_id,
@@ -270,11 +326,15 @@ class StreamingQueryService:
             abstained=is_abstained,
             trace_id=trace_id,
             prompt_version=prompt_ver,
-            model=settings.LLM_MODEL,
+            model=settings.LLM_MODEL if not is_abstained else "abstention-gate",
             input_tokens=prompt_tokens,
             output_tokens=completion_tokens,
             cost_usd=0.0,
             latency_ms=latency_ms,
+            groundedness_score=groundedness_score,
+            context_relevance_score=context_relevance_score,
+            answer_relevance_score=answer_relevance_score,
+            hallucination_flag=hallucination_flag,
         )
         self.db.add(log_record)
 
@@ -305,6 +365,8 @@ class StreamingQueryService:
                 output_tokens=completion_tokens,
                 cost_usd=0.0,
                 latency_ms=latency_ms,
+                groundedness_score=groundedness_score,
+                hallucination_warning=hallucination_flag,
                 query_id=query_id,
             )
             await self.cache.set(
@@ -325,4 +387,6 @@ class StreamingQueryService:
             "input_tokens": prompt_tokens,
             "output_tokens": completion_tokens,
             "cost_usd": 0.0,
+            "groundedness_score": groundedness_score,
+            "hallucination_warning": hallucination_flag,
         })
