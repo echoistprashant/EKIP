@@ -1,63 +1,94 @@
 DASHBOARD_HTML = """<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EKIP - Enterprise Knowledge Intelligence Platform</title>
+  <title>EKIP — Enterprise Knowledge Intelligence Platform</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    @keyframes pulse-subtle { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    @keyframes pulse-subtle { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     .streaming-pulse { animation: pulse-subtle 1.2s infinite; }
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
   </style>
 </head>
-<body class="bg-gray-950 text-gray-100 font-sans min-h-screen flex flex-col">
+<body class="h-full bg-slate-50 text-slate-800 font-sans flex flex-col antialiased">
 
-  <!-- TOP HEADER -->
-  <header class="border-b border-gray-800 bg-gray-900/90 backdrop-blur sticky top-0 z-50 px-6 py-3.5 flex items-center justify-between shadow-md">
-    <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/20">
-        <i class="fa-solid fa-brain text-lg"></i>
+  <!-- TOP APP BAR -->
+  <header class="bg-white border-b border-slate-200/90 sticky top-0 z-40 px-6 py-3 flex items-center justify-between shadow-sm/50">
+    <!-- BRAND / LOGO -->
+    <div class="flex items-center space-x-3.5">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/25 ring-2 ring-brand-100">
+        <i class="fa-solid fa-shapes text-lg"></i>
       </div>
       <div>
-        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-          EKIP <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v0.1.0 Enterprise</span>
-        </h1>
-        <p class="text-xs text-gray-400">Enterprise Knowledge Intelligence Platform (100% Free & Local)</p>
+        <div class="flex items-center gap-2.5">
+          <h1 class="text-base font-extrabold tracking-tight text-slate-900">EKIP</h1>
+          <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 font-mono">Enterprise RAG</span>
+        </div>
+        <p class="text-[11px] font-medium text-slate-400">Multi-Tenant Knowledge Intelligence Platform (Free & Local)</p>
       </div>
     </div>
 
-    <!-- NAVIGATION TABS -->
-    <nav class="hidden md:flex space-x-1 bg-gray-950/60 p-1 rounded-xl border border-gray-800">
-      <button onclick="switchTab('chat')" id="tab-btn-chat" class="tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 bg-indigo-600 text-white shadow-sm flex items-center gap-2">
-        <i class="fa-solid fa-comments"></i> RAG Chat Assistant
+    <!-- NAVIGATION SEGMENTED CONTROLS -->
+    <nav class="hidden md:flex bg-slate-100/90 p-1 rounded-xl border border-slate-200">
+      <button onclick="switchTab('chat')" id="tab-btn-chat" class="tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 bg-white text-slate-900 shadow-sm flex items-center gap-2">
+        <i class="fa-solid fa-message text-brand-600"></i> RAG Chat Assistant
       </button>
-      <button onclick="switchTab('documents')" id="tab-btn-documents" class="tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 flex items-center gap-2">
-        <i class="fa-solid fa-folder-open"></i> Documents & Queue
+      <button onclick="switchTab('documents')" id="tab-btn-documents" class="tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 flex items-center gap-2">
+        <i class="fa-solid fa-layer-group text-slate-400"></i> Knowledge Ingestion & Queue
       </button>
-      <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 flex items-center gap-2">
-        <i class="fa-solid fa-chart-line"></i> Analytics & Observability
+      <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 flex items-center gap-2">
+        <i class="fa-solid fa-chart-simple text-slate-400"></i> System Telemetry & Observability
       </button>
     </nav>
 
-    <!-- AUTH BAR -->
+    <!-- AUTHENTICATION STATUS -->
     <div class="flex items-center space-x-3">
-      <div id="user-pill" class="hidden items-center gap-2 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700 text-xs">
-        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-        <span id="tenant-display" class="font-semibold text-gray-200">Tenant</span>
-        <span id="role-badge" class="px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-300 font-mono">admin</span>
-        <button onclick="logout()" class="text-gray-400 hover:text-red-400 ml-2" title="Sign out"><i class="fa-solid fa-right-from-bracket"></i></button>
+      <div id="user-pill" class="hidden items-center gap-2.5 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="tenant-display" class="font-bold text-slate-800">Acme Corp</span>
+        <span id="role-badge" class="px-2 py-0.5 rounded-md text-[10px] bg-brand-100 text-brand-700 font-bold font-mono">admin</span>
+        <button onclick="logout()" class="text-slate-400 hover:text-rose-600 ml-1.5 transition" title="Sign Out">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </button>
       </div>
-      <button id="login-modal-btn" onclick="openAuthModal()" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow transition">
-        <i class="fa-solid fa-user-lock mr-1"></i> Sign In / Register
+
+      <button id="login-modal-btn" onclick="openAuthModal()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm shadow-brand-500/20 transition flex items-center gap-2">
+        <i class="fa-solid fa-lock text-[10px]"></i> Sign In / Register
       </button>
     </div>
   </header>
 
-  <!-- MAIN VIEW CONTAINER -->
+  <!-- WORKSPACE VIEWPORT -->
   <main class="flex-1 flex overflow-hidden">
 
     <!-- ========================================== -->
@@ -65,73 +96,98 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <!-- ========================================== -->
     <section id="view-chat" class="flex-1 flex overflow-hidden">
       <!-- SIDEBAR CONTROLS -->
-      <aside class="w-80 border-r border-gray-800 bg-gray-900/50 p-5 flex flex-col justify-between overflow-y-auto custom-scrollbar">
-        <div class="space-y-5">
+      <aside class="w-80 border-r border-slate-200 bg-white p-5 flex flex-col justify-between overflow-y-auto custom-scrollbar">
+        <div class="space-y-6">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Knowledge Collection</label>
-            <select id="chat-collection-select" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 transition">
-              <option value="">Loading collections...</option>
-            </select>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Knowledge Collection</label>
+            <div class="relative">
+              <select id="chat-collection-select" class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                <option value="">Loading collections...</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                <i class="fa-solid fa-chevron-down text-[10px]"></i>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1.5 font-medium">Scans isolated tenant partition only.</p>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Query Transformation</label>
-            <select id="chat-strategy-select" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 transition">
-              <option value="none">None (Standard Hybrid RRF)</option>
-              <option value="hyde">HyDE (Hypothetical Doc Embedding)</option>
-              <option value="expansion">Multi-Query Expansion</option>
-              <option value="rewrite">Query Rewriter</option>
-            </select>
-            <p class="text-[11px] text-gray-500 mt-1">Enhances search recall via zero-cost query reformulations.</p>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Query Transformation</label>
+            <div class="relative">
+              <select id="chat-strategy-select" class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                <option value="none">Standard Hybrid RRF</option>
+                <option value="hyde">HyDE (Hypothetical Doc Embedding)</option>
+                <option value="expansion">Multi-Query Expansion</option>
+                <option value="rewrite">Query Rewriter</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                <i class="fa-solid fa-chevron-down text-[10px]"></i>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1.5 font-medium">Reformulates queries before vector retrieval.</p>
           </div>
 
-          <div class="border-t border-gray-800 pt-4 space-y-3">
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-medium text-gray-300">Real-Time Streaming (SSE)</label>
-              <input type="checkbox" id="chat-stream-toggle" checked class="accent-indigo-600 w-4 h-4 cursor-pointer">
-            </div>
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-medium text-gray-300">Cross-Encoder Reranking</label>
-              <input type="checkbox" id="chat-rerank-toggle" checked class="accent-indigo-600 w-4 h-4 cursor-pointer">
-            </div>
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-medium text-gray-300">Sentence Compression</label>
-              <input type="checkbox" id="chat-compress-toggle" checked class="accent-indigo-600 w-4 h-4 cursor-pointer">
-            </div>
+          <div class="border-t border-slate-100 pt-5 space-y-3.5">
+            <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Pipeline Safeguards</span>
+            
+            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
+              <span class="text-xs font-semibold text-slate-700">Real-Time Streaming (SSE)</span>
+              <input type="checkbox" id="chat-stream-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+            </label>
+
+            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
+              <span class="text-xs font-semibold text-slate-700">Cross-Encoder Reranker</span>
+              <input type="checkbox" id="chat-rerank-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+            </label>
+
+            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
+              <span class="text-xs font-semibold text-slate-700">Context Compression</span>
+              <input type="checkbox" id="chat-compress-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+            </label>
           </div>
         </div>
 
-        <div class="border-t border-gray-800 pt-4 text-[11px] text-gray-500 space-y-1">
-          <div class="flex justify-between"><span>Vector Embeddings:</span> <span class="text-gray-300 font-mono">1024-d (FastEmbed)</span></div>
-          <div class="flex justify-between"><span>Reranker:</span> <span class="text-gray-300 font-mono">bge-reranker (CPU)</span></div>
-          <div class="flex justify-between"><span>Inference Cost:</span> <span class="text-emerald-400 font-mono">$0.00 / query</span></div>
+        <div class="border-t border-slate-100 pt-5 text-[11px] space-y-2">
+          <div class="flex items-center justify-between text-slate-500">
+            <span>Embeddings:</span>
+            <span class="font-mono font-semibold text-slate-800">1024-d BAAI (CPU)</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-500">
+            <span>Semantic Cache:</span>
+            <span class="font-mono font-semibold text-emerald-600">Redis L1/L2 Active</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-500">
+            <span>Query Cost:</span>
+            <span class="font-mono font-bold text-emerald-600">$0.00 / query</span>
+          </div>
         </div>
       </aside>
 
-      <!-- CHAT MESSAGE CANVAS -->
-      <div class="flex-1 flex flex-col bg-gray-950">
-        <!-- MESSAGES LIST -->
-        <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-          <div class="flex gap-3 text-sm max-w-3xl">
-            <div class="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0">
+      <!-- CHAT THREAD CANVAS -->
+      <div class="flex-1 flex flex-col bg-slate-50/70">
+        <!-- MESSAGES FEED -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar">
+          <!-- WELCOME MESSAGE BUBBLE -->
+          <div class="flex gap-4 text-sm max-w-3xl">
+            <div class="w-9 h-9 rounded-xl bg-white border border-slate-200 text-brand-600 shadow-sm flex items-center justify-center shrink-0">
               <i class="fa-solid fa-robot"></i>
             </div>
-            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 text-gray-200 space-y-2">
-              <p class="font-medium text-white">Hello! I am your Enterprise Knowledge Assistant.</p>
-              <p class="text-xs text-gray-400 leading-relaxed">
-                I answer questions strictly grounded in your enterprise knowledge collections, complete with verified citations, real-time RAG Triad hallucination guardrails, and zero hallucination guarantee.
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-5 text-slate-700 space-y-2 shadow-sm">
+              <p class="font-bold text-slate-900 text-sm">Welcome to the Enterprise Knowledge Assistant</p>
+              <p class="text-xs text-slate-600 leading-relaxed font-normal">
+                I generate answers grounded strictly in your enterprise knowledge documents. Every factual claim is verified with numbered source citations <span class="font-mono font-bold text-brand-700 bg-brand-50 px-1 py-0.5 rounded border border-brand-200">[1]</span>, evaluated by RAG Triad guardrails, with zero hallucination guarantee.
               </p>
             </div>
           </div>
         </div>
 
-        <!-- CHAT INPUT COMPONENT -->
-        <div class="p-4 border-t border-gray-800 bg-gray-900/40">
-          <form onsubmit="handleSendQuery(event)" class="max-w-4xl mx-auto flex gap-3">
-            <input type="text" id="chat-input" placeholder="Ask a question about your enterprise documents..." 
-                   class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
-            <button type="submit" id="send-btn" class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/30 transition flex items-center gap-2">
-              <span>Send</span> <i class="fa-solid fa-paper-plane text-xs"></i>
+        <!-- FLOATING PROMPT INPUT CAPSULE -->
+        <div class="p-4 md:p-6 bg-gradient-to-t from-white via-white/90 to-transparent">
+          <form onsubmit="handleSendQuery(event)" class="max-w-4xl mx-auto flex gap-3 bg-white border border-slate-300/80 rounded-2xl p-1.5 shadow-lg shadow-slate-200/60 focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-600 transition">
+            <input type="text" id="chat-input" placeholder="Ask a question about your uploaded documents..." 
+                   class="flex-1 bg-transparent px-4 py-2.5 text-xs md:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none">
+            <button type="submit" id="send-btn" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md shadow-brand-500/25 transition flex items-center gap-2">
+              <span>Send</span> <i class="fa-solid fa-arrow-up text-[10px]"></i>
             </button>
           </form>
         </div>
@@ -139,109 +195,119 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </section>
 
     <!-- ========================================== -->
-    <!-- TAB 2: DOCUMENTS & BACKGROUND QUEUE -->
+    <!-- TAB 2: DOCUMENTS & INGESTION QUEUE -->
     <!-- ========================================== -->
-    <section id="view-documents" class="hidden flex-1 overflow-y-auto p-8 bg-gray-950 custom-scrollbar">
+    <section id="view-documents" class="hidden flex-1 overflow-y-auto p-8 bg-slate-50 custom-scrollbar">
       <div class="max-w-6xl mx-auto space-y-8">
-        <!-- TOP ACTIONS & STATS -->
+        <!-- HEADER & ACTIONS -->
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-xl font-bold text-white">Knowledge Ingestion & Queue</h2>
-            <p class="text-xs text-gray-400 mt-1">Upload enterprise documents into isolated collections with structural chunking and async background queues.</p>
+            <h2 class="text-lg font-bold text-slate-900">Knowledge Ingestion & Queue</h2>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">Upload enterprise documents into isolated collections with structural chunking and async background queues.</p>
           </div>
-          <button onclick="openCreateCollectionModal()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow flex items-center gap-2">
-            <i class="fa-solid fa-plus"></i> New Collection
+          <button onclick="openCreateCollectionModal()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm flex items-center gap-2 transition">
+            <i class="fa-solid fa-plus text-[10px]"></i> New Collection
           </button>
         </div>
 
-        <!-- UPLOAD DROPZONE -->
+        <!-- UPLOAD SECTION -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="md:col-span-2 bg-gray-900/60 border border-gray-800 rounded-2xl p-6">
-            <h3 class="text-sm font-semibold text-gray-200 mb-4 flex items-center gap-2">
-              <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i> Document Ingestion Dropzone
+          <div class="md:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-cloud-arrow-up text-brand-600"></i> Document Dropzone
             </h3>
             
             <form id="upload-form" onsubmit="handleUploadDocument(event)" class="space-y-4">
               <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1">Target Knowledge Collection</label>
-                <select id="upload-collection-select" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-indigo-500">
-                  <option value="">Select a collection...</option>
-                </select>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Target Collection</label>
+                <div class="relative">
+                  <select id="upload-collection-select" required class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-brand-600">
+                    <option value="">Select a collection...</option>
+                  </select>
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                  </div>
+                </div>
               </div>
 
-              <!-- DRAG DROP AREA -->
-              <div id="drop-area" class="border-2 border-dashed border-gray-700 hover:border-indigo-500 rounded-xl p-8 text-center cursor-pointer transition bg-gray-950/40"
+              <!-- DRAG DROP CONTAINER -->
+              <div id="drop-area" class="border-2 border-dashed border-slate-200 hover:border-brand-500 rounded-2xl p-8 text-center cursor-pointer transition bg-slate-50/60 group"
                    onclick="document.getElementById('file-input').click()">
                 <input type="file" id="file-input" class="hidden" accept=".pdf,.md,.txt">
-                <i class="fa-solid fa-file-arrow-up text-3xl text-gray-500 mb-3"></i>
-                <p id="file-chosen-text" class="text-xs text-gray-300 font-medium">Click to browse or drag and drop files here</p>
-                <p class="text-[11px] text-gray-500 mt-1">Supports Markdown (.md), PDF (.pdf), Text (.txt) up to 50 MB</p>
+                <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition">
+                  <i class="fa-solid fa-file-pdf text-xl text-brand-600"></i>
+                </div>
+                <p id="file-chosen-text" class="text-xs text-slate-700 font-bold">Click to browse or drag and drop files here</p>
+                <p class="text-[11px] text-slate-400 mt-1">Supports Markdown (.md), PDF (.pdf), Text (.txt) up to 50 MB</p>
               </div>
 
               <div class="flex items-center justify-between pt-2">
-                <label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                  <input type="checkbox" id="upload-async-toggle" checked class="accent-indigo-600 w-4 h-4">
-                  <span>Asynchronous Background Queue (Redis)</span>
+                <label class="flex items-center gap-2.5 text-xs text-slate-600 font-medium cursor-pointer">
+                  <input type="checkbox" id="upload-async-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300">
+                  <span>Asynchronous Background Task Queue (Redis)</span>
                 </label>
-                <button type="submit" id="upload-submit-btn" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow transition">
+                <button type="submit" id="upload-submit-btn" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm transition">
                   Ingest Document
                 </button>
               </div>
             </form>
           </div>
 
-          <!-- ACTIVE JOB PROGRESS PANEL -->
-          <div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 flex flex-col justify-between">
+          <!-- ACTIVE TASK MONITOR -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
             <div>
-              <h3 class="text-sm font-semibold text-gray-200 mb-2 flex items-center gap-2">
-                <i class="fa-solid fa-gears text-indigo-400"></i> Active Task Worker
+              <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-amber-500"></i> Active Task Worker
               </h3>
-              <p class="text-xs text-gray-400 mb-4">Background Redis queue task monitor.</p>
+              <p class="text-xs text-slate-500 font-medium mb-4">Background task status and stage execution.</p>
               
-              <div id="active-job-box" class="hidden bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3">
-                <div class="flex items-center justify-between text-xs">
-                  <span class="font-semibold text-gray-200" id="job-doc-name">Document</span>
-                  <span id="job-status-pill" class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">queued</span>
+              <div id="active-job-box" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <div class="flex items-center justify-between text-xs font-bold">
+                  <span class="text-slate-800 truncate max-w-[160px]" id="job-doc-name">Document</span>
+                  <span id="job-status-pill" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200">queued</span>
                 </div>
-                <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
-                  <div id="job-progress-bar" class="bg-indigo-600 h-2 transition-all duration-300" style="width: 0%"></div>
+                <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div id="job-progress-bar" class="bg-brand-600 h-2 transition-all duration-300 rounded-full" style="width: 0%"></div>
                 </div>
-                <div class="flex justify-between text-[11px] text-gray-400">
+                <div class="flex justify-between text-[11px] font-semibold text-slate-500">
                   <span id="job-stage-text">Stage: queued</span>
-                  <span id="job-progress-text">0%</span>
+                  <span id="job-progress-text" class="font-mono">0%</span>
                 </div>
               </div>
 
-              <div id="no-active-job" class="text-center py-8 text-gray-500 text-xs">
-                No active ingestion jobs currently running.
+              <div id="no-active-job" class="text-center py-10 text-slate-400 text-xs font-medium">
+                No active ingestion tasks running.
               </div>
             </div>
 
-            <div class="text-[11px] text-gray-500 pt-4 border-t border-gray-800">
-              <span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> Ingestion Engine Ready</span> (Structural chunking with contextual path headers).
+            <div class="text-[11px] text-slate-500 pt-4 border-t border-slate-100 flex items-center gap-1.5 font-medium">
+              <i class="fa-solid fa-circle-check text-emerald-500"></i>
+              <span>Worker Daemon Active on Redis Port 6379</span>
             </div>
           </div>
         </div>
 
-        <!-- INGESTED DOCUMENTS TABLE -->
-        <div class="bg-gray-900/60 border border-gray-800 rounded-2xl overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-white">Ingested Document Repository</h3>
-            <button onclick="loadDocumentsList()" class="text-xs text-gray-400 hover:text-gray-200"><i class="fa-solid fa-rotate-right mr-1"></i> Refresh</button>
+        <!-- REPOSITORY TABLE -->
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Document Repository</h3>
+            <button onclick="loadDocumentsList()" class="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-rotate-right text-[11px]"></i> Refresh
+            </button>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
-              <thead class="bg-gray-950/60 text-gray-400 uppercase tracking-wider font-semibold border-b border-gray-800">
+              <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200/80">
                 <tr>
-                  <th class="px-6 py-3">Document Title</th>
-                  <th class="px-6 py-3">MIME Type</th>
-                  <th class="px-6 py-3">Content Hash</th>
-                  <th class="px-6 py-3">Status</th>
-                  <th class="px-6 py-3">Created</th>
+                  <th class="px-6 py-3.5">Document Title</th>
+                  <th class="px-6 py-3.5">MIME Type</th>
+                  <th class="px-6 py-3.5">Content Hash</th>
+                  <th class="px-6 py-3.5">Status</th>
+                  <th class="px-6 py-3.5">Created</th>
                 </tr>
               </thead>
-              <tbody id="documents-table-body" class="divide-y divide-gray-800 text-gray-300">
-                <tr><td colspan="5" class="px-6 py-6 text-center text-gray-500">Loading documents...</td></tr>
+              <tbody id="documents-table-body" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">Loading documents...</td></tr>
               </tbody>
             </table>
           </div>
@@ -252,97 +318,97 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <!-- ========================================== -->
     <!-- TAB 3: ANALYTICS & OBSERVABILITY -->
     <!-- ========================================== -->
-    <section id="view-analytics" class="hidden flex-1 overflow-y-auto p-8 bg-gray-950 custom-scrollbar">
+    <section id="view-analytics" class="hidden flex-1 overflow-y-auto p-8 bg-slate-50 custom-scrollbar">
       <div class="max-w-6xl mx-auto space-y-8">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-xl font-bold text-white">System Telemetry & Observability</h2>
-            <p class="text-xs text-gray-400 mt-1">Real-time telemetry, cache hit efficiency, LLM costs, and RAG Triad quality metrics.</p>
+            <h2 class="text-lg font-bold text-slate-900">System Telemetry & Quality Overview</h2>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">Real-time telemetry, cache hit efficiency, LLM costs, and RAG Triad quality metrics.</p>
           </div>
-          <button onclick="loadAnalyticsOverview()" class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-200 border border-gray-700 shadow flex items-center gap-2">
-            <i class="fa-solid fa-arrows-rotate"></i> Refresh Telemetry
+          <button onclick="loadAnalyticsOverview()" class="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 border border-slate-200 shadow-sm flex items-center gap-2 transition">
+            <i class="fa-solid fa-rotate text-[10px]"></i> Refresh Telemetry
           </button>
         </div>
 
-        <!-- 6 KPI METRIC CARDS -->
+        <!-- 6 KPI CARDS -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-            <span class="text-[11px] font-medium text-gray-400">Total Queries</span>
-            <p id="kpi-queries" class="text-xl font-bold text-white mt-1">0</p>
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Queries</span>
+            <p id="kpi-queries" class="text-2xl font-extrabold text-slate-900 mt-1.5 font-mono">0</p>
           </div>
-          <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-            <span class="text-[11px] font-medium text-gray-400">Cache Hit Rate</span>
-            <p id="kpi-cache-rate" class="text-xl font-bold text-emerald-400 mt-1">0.0%</p>
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Cache Hit Rate</span>
+            <p id="kpi-cache-rate" class="text-2xl font-extrabold text-emerald-600 mt-1.5 font-mono">0.0%</p>
           </div>
-          <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-            <span class="text-[11px] font-medium text-gray-400">Average Latency</span>
-            <p id="kpi-latency" class="text-xl font-bold text-indigo-400 mt-1">0 ms</p>
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Average Latency</span>
+            <p id="kpi-latency" class="text-2xl font-extrabold text-brand-600 mt-1.5 font-mono">0 ms</p>
           </div>
-          <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-            <span class="text-[11px] font-medium text-gray-400">Total Cost</span>
-            <p id="kpi-cost" class="text-xl font-bold text-emerald-400 mt-1">$0.0000</p>
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Cost</span>
+            <p id="kpi-cost" class="text-2xl font-extrabold text-emerald-600 mt-1.5 font-mono">$0.0000</p>
           </div>
-          <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-            <span class="text-[11px] font-medium text-gray-400">Hallucination Rate</span>
-            <p id="kpi-hallucination" class="text-xl font-bold text-amber-400 mt-1">0.0%</p>
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Hallucination Rate</span>
+            <p id="kpi-hallucination" class="text-2xl font-extrabold text-amber-600 mt-1.5 font-mono">0.0%</p>
           </div>
-          <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-            <span class="text-[11px] font-medium text-gray-400">User Satisfaction</span>
-            <p id="kpi-satisfaction" class="text-xl font-bold text-violet-400 mt-1">100%</p>
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">User Satisfaction</span>
+            <p id="kpi-satisfaction" class="text-2xl font-extrabold text-indigo-600 mt-1.5 font-mono">100%</p>
           </div>
         </div>
 
         <!-- RAG TRIAD QUALITY AUDIT -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-6">
+          <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-semibold text-gray-300">Groundedness (Faithfulness)</span>
-              <span id="score-groundedness" class="text-sm font-bold text-emerald-400 font-mono">1.00</span>
+              <span class="text-xs font-bold text-slate-700">Groundedness (Faithfulness)</span>
+              <span id="score-groundedness" class="text-sm font-extrabold text-emerald-600 font-mono">1.00</span>
             </div>
-            <div class="w-full bg-gray-800 rounded-full h-2 mb-2">
+            <div class="w-full bg-slate-100 rounded-full h-2 mb-3 overflow-hidden">
               <div id="bar-groundedness" class="bg-emerald-500 h-2 rounded-full" style="width: 100%"></div>
             </div>
-            <p class="text-[11px] text-gray-400">Verifies that claims in the answer are strictly supported by retrieved context.</p>
+            <p class="text-[11px] text-slate-500 font-medium">Verifies that claims in the answer are strictly supported by retrieved context.</p>
           </div>
 
-          <div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-6">
+          <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-semibold text-gray-300">Context Relevance</span>
-              <span id="score-context" class="text-sm font-bold text-indigo-400 font-mono">1.00</span>
+              <span class="text-xs font-bold text-slate-700">Context Relevance</span>
+              <span id="score-context" class="text-sm font-extrabold text-brand-600 font-mono">1.00</span>
             </div>
-            <div class="w-full bg-gray-800 rounded-full h-2 mb-2">
-              <div id="bar-context" class="bg-indigo-500 h-2 rounded-full" style="width: 100%"></div>
+            <div class="w-full bg-slate-100 rounded-full h-2 mb-3 overflow-hidden">
+              <div id="bar-context" class="bg-brand-600 h-2 rounded-full" style="width: 100%"></div>
             </div>
-            <p class="text-[11px] text-gray-400">Measures lexical & semantic alignment between user question and chunks.</p>
+            <p class="text-[11px] text-slate-500 font-medium">Measures lexical & semantic alignment between user question and chunks.</p>
           </div>
 
-          <div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-6">
+          <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-semibold text-gray-300">Answer Relevance</span>
-              <span id="score-answer" class="text-sm font-bold text-violet-400 font-mono">1.00</span>
+              <span class="text-xs font-bold text-slate-700">Answer Relevance</span>
+              <span id="score-answer" class="text-sm font-extrabold text-indigo-600 font-mono">1.00</span>
             </div>
-            <div class="w-full bg-gray-800 rounded-full h-2 mb-2">
-              <div id="bar-answer" class="bg-violet-500 h-2 rounded-full" style="width: 100%"></div>
+            <div class="w-full bg-slate-100 rounded-full h-2 mb-3 overflow-hidden">
+              <div id="bar-answer" class="bg-indigo-600 h-2 rounded-full" style="width: 100%"></div>
             </div>
-            <p class="text-[11px] text-gray-400">Ensures the generated answer directly addresses the user query.</p>
+            <p class="text-[11px] text-slate-500 font-medium">Ensures the generated answer directly addresses the user query.</p>
           </div>
         </div>
 
-        <!-- MODEL CONSUMPTION BREAKDOWN -->
-        <div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-6">
-          <h3 class="text-sm font-semibold text-white mb-4">Model Cost & Distribution Breakdown</h3>
+        <!-- MODEL CONSUMPTION TABLE -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4">Model Cost & Distribution Breakdown</h3>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
-              <thead class="bg-gray-950/60 text-gray-400 uppercase tracking-wider font-semibold border-b border-gray-800">
+              <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
                 <tr>
-                  <th class="px-6 py-3">Model / Source</th>
-                  <th class="px-6 py-3">Executions</th>
-                  <th class="px-6 py-3">Cumulative Cost</th>
-                  <th class="px-6 py-3">Efficiency</th>
+                  <th class="px-6 py-3.5">Model / Source</th>
+                  <th class="px-6 py-3.5">Executions</th>
+                  <th class="px-6 py-3.5">Cumulative Cost</th>
+                  <th class="px-6 py-3.5">Efficiency</th>
                 </tr>
               </thead>
-              <tbody id="models-table-body" class="divide-y divide-gray-800 text-gray-300">
-                <tr><td colspan="4" class="px-6 py-6 text-center text-gray-500">No query data recorded yet</td></tr>
+              <tbody id="models-table-body" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                <tr><td colspan="4" class="px-6 py-6 text-center text-slate-400">No query data recorded yet</td></tr>
               </tbody>
             </table>
           </div>
@@ -356,37 +422,37 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <!-- MODALS -->
   <!-- ========================================== -->
   <!-- AUTH MODAL -->
-  <div id="auth-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+  <div id="auth-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-base font-bold text-white">Enterprise Authentication</h3>
-        <button onclick="closeAuthModal()" class="text-gray-400 hover:text-gray-200"><i class="fa-solid fa-xmark"></i></button>
+        <h3 class="text-base font-bold text-slate-900">Enterprise Authentication</h3>
+        <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark"></i></button>
       </div>
       
-      <div class="flex border-b border-gray-800 text-xs font-semibold">
-        <button id="auth-tab-login" onclick="setAuthMode('login')" class="flex-1 py-2 text-indigo-400 border-b-2 border-indigo-500">Login</button>
-        <button id="auth-tab-register" onclick="setAuthMode('register')" class="flex-1 py-2 text-gray-400">Register Tenant</button>
+      <div class="flex border-b border-slate-100 text-xs font-bold">
+        <button id="auth-tab-login" onclick="setAuthMode('login')" class="flex-1 py-2 text-brand-600 border-b-2 border-brand-600">Login</button>
+        <button id="auth-tab-register" onclick="setAuthMode('register')" class="flex-1 py-2 text-slate-400">Register Tenant</button>
       </div>
 
-      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3 text-xs">
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3.5 text-xs font-medium">
         <div id="tenant-field" class="hidden">
-          <label class="block text-gray-400 mb-1">Tenant Organization Name</label>
-          <input type="text" id="auth-tenant" placeholder="Acme Corporation" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+          <label class="block text-slate-600 mb-1">Tenant Organization Name</label>
+          <input type="text" id="auth-tenant" placeholder="Acme Corporation" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
         </div>
         <div>
-          <label class="block text-gray-400 mb-1">Work Email</label>
-          <input type="email" id="auth-email" required placeholder="admin@enterprise.com" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+          <label class="block text-slate-600 mb-1">Work Email</label>
+          <input type="email" id="auth-email" required placeholder="admin@enterprise.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
         </div>
         <div>
-          <label class="block text-gray-400 mb-1">Password</label>
-          <input type="password" id="auth-password" required placeholder="••••••••••••" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+          <label class="block text-slate-600 mb-1">Password</label>
+          <input type="password" id="auth-password" required placeholder="••••••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
         </div>
 
-        <button type="submit" class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow transition mt-2">
+        <button type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-500/20 transition mt-2">
           Authenticate
         </button>
 
-        <button type="button" onclick="fillDemoCredentials()" class="w-full py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 font-medium transition">
+        <button type="button" onclick="fillDemoCredentials()" class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition">
           ⚡ Auto-Create Demo Admin
         </button>
       </form>
@@ -394,18 +460,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   </div>
 
   <!-- CREATE COLLECTION MODAL -->
-  <div id="collection-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+  <div id="collection-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-white">Create Knowledge Collection</h3>
-        <button onclick="closeCreateCollectionModal()" class="text-gray-400 hover:text-gray-200"><i class="fa-solid fa-xmark"></i></button>
+        <h3 class="text-sm font-bold text-slate-900">Create Knowledge Collection</h3>
+        <button onclick="closeCreateCollectionModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <form onsubmit="handleCreateCollection(event)" class="space-y-3 text-xs">
+      <form onsubmit="handleCreateCollection(event)" class="space-y-3.5 text-xs font-semibold">
         <div>
-          <label class="block text-gray-400 mb-1">Collection Name</label>
-          <input type="text" id="new-collection-name" required placeholder="e.g. Engineering Runbooks" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+          <label class="block text-slate-600 mb-1">Collection Name</label>
+          <input type="text" id="new-collection-name" required placeholder="e.g. Engineering Handbook" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
         </div>
-        <button type="submit" class="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow transition">
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-sm transition">
           Create Collection
         </button>
       </form>
@@ -413,19 +479,19 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   </div>
 
   <!-- FEEDBACK MODAL -->
-  <div id="feedback-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+  <div id="feedback-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-white">Response Feedback</h3>
-        <button onclick="closeFeedbackModal()" class="text-gray-400 hover:text-gray-200"><i class="fa-solid fa-xmark"></i></button>
+        <h3 class="text-sm font-bold text-slate-900">Response Feedback</h3>
+        <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <form onsubmit="handleSubmitFeedback(event)" class="space-y-3 text-xs">
+      <form onsubmit="handleSubmitFeedback(event)" class="space-y-3.5 text-xs font-medium">
         <input type="hidden" id="feedback-query-id">
         <input type="hidden" id="feedback-is-helpful">
 
         <div>
-          <label class="block text-gray-400 mb-1">Rating (1 to 5 Stars)</label>
-          <select id="feedback-rating" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+          <label class="block text-slate-600 mb-1">Rating (1 to 5 Stars)</label>
+          <select id="feedback-rating" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold">
             <option value="5">⭐⭐⭐⭐⭐ Excellent (5)</option>
             <option value="4">⭐⭐⭐⭐ Good (4)</option>
             <option value="3">⭐⭐⭐ Neutral (3)</option>
@@ -435,8 +501,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         </div>
 
         <div>
-          <label class="block text-gray-400 mb-1">Category</label>
-          <select id="feedback-category" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+          <label class="block text-slate-600 mb-1">Category</label>
+          <select id="feedback-category" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold">
             <option value="general">General Feedback</option>
             <option value="hallucination">Hallucination Detected</option>
             <option value="missing_info">Missing Key Information</option>
@@ -446,11 +512,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         </div>
 
         <div>
-          <label class="block text-gray-400 mb-1">Comment (Optional)</label>
-          <textarea id="feedback-comment" rows="3" placeholder="Tell us what could be improved..." class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"></textarea>
+          <label class="block text-slate-600 mb-1">Comment (Optional)</label>
+          <textarea id="feedback-comment" rows="3" placeholder="Tell us what could be improved..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900"></textarea>
         </div>
 
-        <button type="submit" class="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow transition">
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-sm transition">
           Submit Feedback
         </button>
       </form>
@@ -465,7 +531,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     let authMode = 'login';
     let pollingInterval = null;
 
-    // Initialize UI on load
     document.addEventListener('DOMContentLoaded', () => {
       checkAuthStatus();
       if (authToken) {
@@ -498,11 +563,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         if (tab === tabId) {
           view.classList.remove('hidden');
           if (tab === 'chat') view.classList.add('flex');
-          btn.className = 'tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 bg-indigo-600 text-white shadow-sm flex items-center gap-2';
+          btn.className = 'tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 bg-white text-slate-900 shadow-sm flex items-center gap-2';
         } else {
           view.classList.add('hidden');
           view.classList.remove('flex');
-          btn.className = 'tab-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 flex items-center gap-2';
+          btn.className = 'tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 flex items-center gap-2';
         }
       });
       if (tabId === 'documents') loadDocumentsList();
@@ -519,12 +584,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const registerTab = document.getElementById('auth-tab-register');
       if (mode === 'register') {
         tenantField.classList.remove('hidden');
-        registerTab.className = 'flex-1 py-2 text-indigo-400 border-b-2 border-indigo-500';
-        loginTab.className = 'flex-1 py-2 text-gray-400';
+        registerTab.className = 'flex-1 py-2 text-brand-600 border-b-2 border-brand-600';
+        loginTab.className = 'flex-1 py-2 text-slate-400';
       } else {
         tenantField.classList.add('hidden');
-        loginTab.className = 'flex-1 py-2 text-indigo-400 border-b-2 border-indigo-500';
-        registerTab.className = 'flex-1 py-2 text-gray-400';
+        loginTab.className = 'flex-1 py-2 text-brand-600 border-b-2 border-brand-600';
+        registerTab.className = 'flex-1 py-2 text-slate-400';
       }
     }
 
@@ -540,7 +605,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ email, password, role: 'admin', tenant_name: tenant })
         });
-        const data = await res.json();
         const loginRes = await fetch('/api/v1/auth/login', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -641,7 +705,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
     }
 
-    // CHAT & STREAMING PIPELINE
+    // CHAT & STREAMING
     async function handleSendQuery(e) {
       e.preventDefault();
       const input = document.getElementById('chat-input');
@@ -662,17 +726,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const rerank = document.getElementById('chat-rerank-toggle').checked;
       const compress = document.getElementById('chat-compress-toggle').checked;
 
-      // Append User Message
       appendUserMessage(query);
       input.value = '';
 
-      // Prepare Assistant Box
       const assistantMessageId = 'msg-' + Math.random().toString(36).substring(2, 9);
-      const assistantBox = appendAssistantSkeleton(assistantMessageId);
+      appendAssistantSkeleton(assistantMessageId);
 
       try {
         if (isStreaming) {
-          // SSE STREAMING
           const response = await fetch('/api/v1/query/stream', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
@@ -726,7 +787,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             }
           }
         } else {
-          // STANDARD JSON
           const response = await fetch('/api/v1/query', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
@@ -745,10 +805,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const div = document.createElement('div');
       div.className = 'flex gap-3 text-sm max-w-3xl ml-auto justify-end';
       div.innerHTML = `
-        <div class="bg-indigo-600 rounded-2xl px-4 py-3 text-white max-w-xl">
-          <p class="leading-relaxed">${escapeHtml(text)}</p>
+        <div class="bg-brand-600 rounded-2xl px-5 py-3 text-white max-w-xl shadow-md shadow-brand-500/20">
+          <p class="leading-relaxed font-medium">${escapeHtml(text)}</p>
         </div>
-        <div class="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center shrink-0 font-bold">
           <i class="fa-solid fa-user text-xs"></i>
         </div>
       `;
@@ -760,13 +820,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const container = document.getElementById('chat-messages');
       const div = document.createElement('div');
       div.id = id;
-      div.className = 'flex gap-3 text-sm max-w-3xl';
+      div.className = 'flex gap-4 text-sm max-w-3xl';
       div.innerHTML = `
-        <div class="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-white border border-slate-200 text-brand-600 shadow-sm flex items-center justify-center shrink-0">
           <i class="fa-solid fa-robot"></i>
         </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 text-gray-200 space-y-3 flex-1">
-          <div class="assistant-content leading-relaxed text-xs streaming-pulse">Thinking & retrieving knowledge sources...</div>
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-5 text-slate-700 space-y-3 flex-1 shadow-sm">
+          <div class="assistant-content leading-relaxed text-xs font-medium text-slate-500 streaming-pulse">
+            <i class="fa-solid fa-circle-notch fa-spin mr-1.5 text-brand-600"></i> Thinking & retrieving knowledge sources...
+          </div>
           <div class="assistant-meta hidden"></div>
         </div>
       `;
@@ -780,7 +842,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       if (!box) return;
       const content = box.querySelector('.assistant-content');
       content.classList.remove('streaming-pulse');
-      content.innerHTML = escapeHtml(text).replace(/\\[(\\d+)\\]/g, '<span class="inline-block px-1.5 py-0.2 mx-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold border border-indigo-500/30">[$1]</span>');
+      content.className = 'assistant-content leading-relaxed text-xs md:text-sm font-normal text-slate-800 space-y-2';
+      content.innerHTML = escapeHtml(text).replace(/\\[(\\d+)\\]/g, '<span class="inline-block px-1.5 py-0.2 mx-0.5 rounded-md bg-brand-50 text-brand-700 font-mono text-[11px] font-bold border border-brand-200">[$1]</span>');
       document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
     }
 
@@ -800,16 +863,16 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       let citationsHtml = '';
       if (citations && citations.length > 0) {
         citationsHtml = `
-          <div class="border-t border-gray-800 pt-2.5 mt-2">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Verified Citations (${citations.length})</span>
-            <div class="space-y-1.5 mt-1.5">
+          <div class="border-t border-slate-100 pt-3 mt-3">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Verified Sources (${citations.length})</span>
+            <div class="space-y-2 mt-2">
               ${citations.map(c => `
-                <div class="text-[11px] bg-gray-950/70 border border-gray-800 rounded-lg p-2 text-gray-300">
-                  <div class="flex items-center justify-between text-indigo-300 font-semibold mb-1">
+                <div class="text-[11px] bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700">
+                  <div class="flex items-center justify-between text-brand-700 font-bold mb-1">
                     <span>[${c.source_id}] ${escapeHtml(c.section_path || 'Document')}</span>
-                    <span class="text-[10px] text-gray-500">Score: ${c.relevance_score ? c.relevance_score.toFixed(2) : '1.0'}</span>
+                    <span class="text-[10px] text-slate-400 font-mono">Score: ${c.relevance_score ? c.relevance_score.toFixed(2) : '1.0'}</span>
                   </div>
-                  <p class="text-gray-400 italic">"${escapeHtml(c.snippet || '')}"</p>
+                  <p class="text-slate-600 italic font-normal">"${escapeHtml(c.snippet || '')}"</p>
                 </div>
               `).join('')}
             </div>
@@ -818,18 +881,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
 
       metaDiv.innerHTML = `
-        <div class="flex items-center justify-between border-t border-gray-800 pt-2 text-[10px] text-gray-400">
+        <div class="flex items-center justify-between border-t border-slate-100 pt-3 text-[11px] font-semibold text-slate-500">
           <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Grounded: ${groundedness}%</span>
-            ${isHallucination ? '<span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">Hallucination Warning</span>' : ''}
-            ${isCached ? '<span class="px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">Cache Hit</span>' : ''}
+            <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold">Grounded: ${groundedness}%</span>
+            ${isHallucination ? '<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-bold">Hallucination Warning</span>' : ''}
+            ${isCached ? '<span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">Cache Hit</span>' : ''}
             <span>Latency: ${meta.latency_ms || 0}ms</span>
           </div>
 
-          <div class="flex items-center gap-1.5">
-            <span class="text-gray-500">Helpful?</span>
-            <button onclick="openFeedbackModal('${queryId}', true)" class="hover:text-emerald-400 px-1 py-0.5" title="Thumbs Up"><i class="fa-regular fa-thumbs-up"></i></button>
-            <button onclick="openFeedbackModal('${queryId}', false)" class="hover:text-rose-400 px-1 py-0.5" title="Thumbs Down"><i class="fa-regular fa-thumbs-down"></i></button>
+          <div class="flex items-center gap-2">
+            <span class="text-slate-400">Helpful?</span>
+            <button onclick="openFeedbackModal('${queryId}', true)" class="hover:text-emerald-600 px-1 py-0.5 transition" title="Thumbs Up"><i class="fa-regular fa-thumbs-up"></i></button>
+            <button onclick="openFeedbackModal('${queryId}', false)" class="hover:text-rose-600 px-1 py-0.5 transition" title="Thumbs Down"><i class="fa-regular fa-thumbs-down"></i></button>
           </div>
         </div>
         ${citationsHtml}
@@ -951,9 +1014,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             clearInterval(pollingInterval);
             pollingInterval = null;
             if (job.status === 'completed') {
-              document.getElementById('job-status-pill').className = 'px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+              document.getElementById('job-status-pill').className = 'px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
             } else {
-              document.getElementById('job-status-pill').className = 'px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20';
+              document.getElementById('job-status-pill').className = 'px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200';
             }
             loadDocumentsList();
           }
@@ -972,20 +1035,20 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         const docs = await res.json();
         const tbody = document.getElementById('documents-table-body');
         if (docs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-6 text-center text-gray-500">No documents ingested yet.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-slate-400 font-medium">No documents ingested yet.</td></tr>';
           return;
         }
         tbody.innerHTML = docs.map(d => `
-          <tr class="hover:bg-gray-900/40">
-            <td class="px-6 py-3.5 font-medium text-white flex items-center gap-2">
-              <i class="fa-solid fa-file-lines text-indigo-400"></i> ${escapeHtml(d.title)}
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="px-6 py-3.5 font-bold text-slate-900 flex items-center gap-2.5">
+              <i class="fa-solid fa-file-lines text-brand-600"></i> ${escapeHtml(d.title)}
             </td>
-            <td class="px-6 py-3.5 text-gray-400 font-mono">${escapeHtml(d.mime_type)}</td>
-            <td class="px-6 py-3.5 font-mono text-gray-500">${d.content_hash.substring(0, 10)}...</td>
+            <td class="px-6 py-3.5 text-slate-500 font-mono">${escapeHtml(d.mime_type)}</td>
+            <td class="px-6 py-3.5 font-mono text-slate-400">${d.content_hash.substring(0, 10)}...</td>
             <td class="px-6 py-3.5">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-mono ${d.status === 'indexed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">${d.status}</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${d.status === 'indexed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">${d.status}</span>
             </td>
-            <td class="px-6 py-3.5 text-gray-400">${new Date(d.created_at).toLocaleDateString()}</td>
+            <td class="px-6 py-3.5 text-slate-500 font-medium">${new Date(d.created_at).toLocaleDateString()}</td>
           </tr>
         `).join('');
       } catch (e) {
@@ -1018,18 +1081,17 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         document.getElementById('score-answer').innerText = data.average_answer_relevance.toFixed(2);
         document.getElementById('bar-answer').style.width = (data.average_answer_relevance * 100) + '%';
 
-        // Models Breakdown Table
         const modelsTable = document.getElementById('models-table-body');
         const models = Object.keys(data.model_breakdown);
         if (models.length === 0) {
-          modelsTable.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-gray-500">No query data recorded yet.</td></tr>';
+          modelsTable.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-slate-400">No query data recorded yet.</td></tr>';
         } else {
           modelsTable.innerHTML = models.map(m => `
             <tr>
-              <td class="px-6 py-3 font-medium text-white">${escapeHtml(m)}</td>
-              <td class="px-6 py-3 font-mono">${data.model_breakdown[m]}</td>
-              <td class="px-6 py-3 font-mono text-emerald-400">$${(data.cost_by_model[m] || 0).toFixed(5)}</td>
-              <td class="px-6 py-3 text-indigo-400 font-medium">${m.includes('cache') ? 'Sub-1ms O(1)' : 'Full RAG Pipeline'}</td>
+              <td class="px-6 py-3.5 font-bold text-slate-900">${escapeHtml(m)}</td>
+              <td class="px-6 py-3.5 font-mono text-slate-700">${data.model_breakdown[m]}</td>
+              <td class="px-6 py-3.5 font-mono text-emerald-600 font-bold">$${(data.cost_by_model[m] || 0).toFixed(5)}</td>
+              <td class="px-6 py-3.5 text-brand-600 font-bold">${m.includes('cache') ? 'Sub-1ms O(1)' : 'Full Pipeline'}</td>
             </tr>
           `).join('');
         }
