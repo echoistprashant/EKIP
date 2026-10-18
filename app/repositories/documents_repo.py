@@ -33,6 +33,19 @@ class DocumentsRepository:
         await self.db.flush()
         return document
 
+    async def list_by_tenant(
+        self,
+        tenant_id: uuid.UUID,
+        collection_id: uuid.UUID | None = None,
+    ) -> list[Document]:
+        """List documents scoped to tenant with optional collection filter."""
+        stmt = select(Document).where(Document.tenant_id == tenant_id)
+        if collection_id:
+            stmt = stmt.where(Document.collection_id == collection_id)
+        stmt = stmt.order_by(Document.created_at.desc())
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
     async def delete(self, document_id: uuid.UUID, tenant_id: uuid.UUID) -> int:
         """Cascade delete document and its chunks scoped to tenant."""
         stmt = delete(Document).where(

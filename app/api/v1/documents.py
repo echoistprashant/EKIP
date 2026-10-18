@@ -44,6 +44,17 @@ async def upload_document(
     return doc
 
 
+@router.get("", response_model=list[DocumentResponse], summary="List documents for current tenant")
+async def list_documents(
+    collection_id: uuid.UUID | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List documents belonging to current tenant, optionally filtered by collection."""
+    doc_repo = DocumentsRepository(db)
+    return await doc_repo.list_by_tenant(current_user.tenant_id, collection_id)
+
+
 @router.get("/jobs/{job_id}", response_model=IngestionJobResponse)
 async def get_ingestion_job(
     job_id: uuid.UUID,
