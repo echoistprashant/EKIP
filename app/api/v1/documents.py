@@ -1,14 +1,17 @@
 import uuid
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_role
 from app.db.session import get_db
 from app.models.document import Document
+from app.models.job import IngestionJob
 from app.models.user import User
 from app.repositories.collections_repo import CollectionsRepository
 from app.repositories.documents_repo import DocumentsRepository
 from app.schemas.document import DocumentCreate, DocumentResponse
+from app.schemas.job import IngestionJobResponse
 from app.services.ingestion_service import IngestionService
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -16,25 +19,50 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_202_ACCEPTED)
 async def upload_document(
+    response: Response,
     collection_id: uuid.UUID = Form(...),
     file: UploadFile = File(...),
+    async_mode: bool = Form(default=False),
     current_user: User = Depends(require_role("admin", "editor")),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Upload and trigger document parsing, cleaning, and structural chunking.
+    Supports:
+    - async_mode=False: Synchronous ingestion pipeline execution.
+    - async_mode=True: Decoupled background task dispatch via Redis Ingestion Queue.
     Idempotent: Re-uploading the same file returns existing document without duplicate chunks.
     """
     service = IngestionService(db)
-    doc, _ = await service.ingest_file(file, collection_id, current_user)
-
-    # Invalidate semantic cache for this collection to prevent stale responses
-    from app.cache import get_semantic_cache
-    cache = get_semantic_cache()
-    if cache is not None:
-        await cache.invalidate_collection(current_user.tenant_id, collection_id)
-
+    doc, _, job = await service.ingest_file(
+        file=file,
+        collection_id=collection_id,
+        user=current_user,
+        async_mode=async_mode,
+    )
+    response.headers["X-Job-ID"] = str(job.id)
     return doc
+
+
+@router.get("/jobs/{job_id}", response_model=IngestionJobResponse)
+async def get_ingestion_job(
+    job_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch real-time ingestion job lifecycle, progress, and stage diagnostics."""
+    stmt = select(IngestionJob).where(
+        IngestionJob.id == job_id,
+        IngestionJob.tenant_id == current_user.tenant_id,
+    )
+    result = await db.execute(stmt)
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Ingestion job not found",
+        )
+    return job
 
 
 @router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
@@ -92,3 +120,23 @@ async def get_document(
             detail="Document not found",
         )
     return doc
+
+
+@router.get("/{document_id}/jobs", response_model=list[IngestionJobResponse])
+async def list_document_jobs(
+    document_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List historical and active ingestion jobs for a document."""
+    stmt = (
+        select(IngestionJob)
+        .where(
+            IngestionJob.document_id == document_id,
+            IngestionJob.tenant_id == current_user.tenant_id,
+        )
+        .order_by(IngestionJob.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
+

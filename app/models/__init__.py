@@ -6,6 +6,7 @@ from app.models.document import Document
 from app.models.chunk import Chunk
 from app.models.query_log import QueryLog, QueryCitation
 from app.models.feedback import QueryFeedback
+from app.models.job import IngestionJob
 
 __all__ = [
     "Base",
@@ -17,4 +18,5 @@ __all__ = [
     "QueryLog",
     "QueryCitation",
     "QueryFeedback",
+    "IngestionJob",
 ]

@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     SEMANTIC_CACHE_THRESHOLD: float = 0.92
     SEMANTIC_CACHE_TTL_SECONDS: int = 86400
 
+    # Background Ingestion Queue
+    UPLOAD_DIR: str = "data/uploads"
+    INGESTION_QUEUE_NAME: str = "ekip:ingestion_jobs"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
