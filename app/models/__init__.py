@@ -5,6 +5,7 @@ from app.models.collection import Collection
 from app.models.document import Document
 from app.models.chunk import Chunk
 from app.models.query_log import QueryLog, QueryCitation
+from app.models.feedback import QueryFeedback
 
 __all__ = [
     "Base",
@@ -15,4 +16,5 @@ __all__ = [
     "Chunk",
     "QueryLog",
     "QueryCitation",
+    "QueryFeedback",
 ]
