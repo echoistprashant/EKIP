@@ -51,6 +51,15 @@ async def retrieve_candidates(
         top_k=req.top_k,
     )
 
+    if req.rerank and candidates:
+        from app.rag.rerank import get_reranker
+        reranker = get_reranker()
+        candidates = await reranker.rerank(
+            query=req.query,
+            candidates=candidates,
+            top_n=req.top_n,
+        )
+
     candidate_dtos = [
         CandidateResponse(
             chunk_id=c.chunk_id,

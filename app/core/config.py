@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     LLM_MODEL: str = "gemini-1.5-flash"
     GEMINI_API_KEY: str | None = None
 
+    # Reranking & Context Compression
+    RERANKER_PROVIDER: Literal["mock", "fastembed"] = "mock"
+    RERANKER_MODEL: str = "BAAI/bge-reranker-base"
+    RERANK_TOP_N: int = 5
+    ENABLE_CONTEXT_COMPRESSION: bool = True
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

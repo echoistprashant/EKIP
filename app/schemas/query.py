@@ -7,7 +7,10 @@ class QueryRequest(BaseModel):
     collection_ids: list[uuid.UUID] | None = Field(
         default=None, description="Optional collection IDs to scope retrieval."
     )
-    top_k: int = Field(default=10, ge=1, le=50, description="Max candidates to retrieve.")
+    top_k: int = Field(default=15, ge=1, le=50, description="Max raw candidates to retrieve in Stage 1.")
+    rerank: bool = Field(default=True, description="Whether to apply Stage 2 Cross-Encoder reranking.")
+    top_n: int = Field(default=5, ge=1, le=20, description="Number of candidates to keep after reranking.")
+    compress_context: bool = Field(default=True, description="Whether to apply extractive sentence compression.")
     temperature: float = Field(default=0.0, ge=0.0, le=1.0, description="LLM sampling temperature.")
     max_context_tokens: int = Field(
         default=3000, ge=500, le=16000, description="Token budget for context injection."

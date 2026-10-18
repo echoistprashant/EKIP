@@ -7,8 +7,10 @@ from app.llm import LLMClient, LLMRequest, get_llm_client
 from app.models.query_log import QueryCitation, QueryLog
 from app.models.user import User
 from app.rag.citations import CitationVerifier
+from app.rag.compression import ExtractiveSentenceCompressor, get_compressor
 from app.rag.context_builder import ContextBuilder
 from app.rag.prompts.manager import PromptManager
+from app.rag.rerank import BaseReranker, get_reranker
 from app.rag.retrieval.base import AccessScope, Candidate
 from app.rag.retrieval.hybrid import HybridRetriever
 from app.schemas.query import CitationItem, QueryRequest, QueryResponse
@@ -17,18 +19,22 @@ from app.schemas.query import CitationItem, QueryRequest, QueryResponse
 class QueryService:
     """
     Orchestrates end-to-end Grounded RAG Generation:
-    1. Hybrid Candidate Retrieval (Dense + Lexical RRF)
+    1. Hybrid Candidate Retrieval (Dense HNSW + Lexical GIN with RRF)
     2. Out-of-domain / zero candidate abstention gate
-    3. Token-budgeted, Lost-in-the-Middle context assembly
-    4. Resilient LLM generation with versioned grounded prompts
-    5. Sentence-level citation extraction and grounding verification
-    6. Audit and telemetry persistence (query_logs + query_citations)
+    3. Stage 2: Deep Cross-Encoder Reranking (top_k -> top_n)
+    4. Context Compression: Extractive sentence window trimming
+    5. Token-budgeted, Lost-in-the-Middle XML context assembly
+    6. Resilient LLM generation with versioned grounded prompts
+    7. Sentence-level citation extraction and grounding verification
+    8. Audit and telemetry persistence (query_logs + query_citations)
     """
 
     def __init__(
         self,
         db: AsyncSession,
         retriever: HybridRetriever | None = None,
+        reranker: BaseReranker | None = None,
+        compressor: ExtractiveSentenceCompressor | None = None,
         llm_client: LLMClient | None = None,
         context_builder: ContextBuilder | None = None,
         prompt_manager: PromptManager | None = None,
@@ -36,6 +42,8 @@ class QueryService:
     ) -> None:
         self.db = db
         self.retriever = retriever or HybridRetriever(db)
+        self.reranker = reranker or get_reranker()
+        self.compressor = compressor or get_compressor()
         self.llm_client = llm_client or get_llm_client()
         self.context_builder = context_builder or ContextBuilder()
         self.prompt_manager = prompt_manager or PromptManager()
@@ -57,7 +65,7 @@ class QueryService:
             collection_ids=req.collection_ids,
         )
 
-        # 2. Retrieve candidates via Hybrid Search (Dense + Lexical + RRF)
+        # 2. Stage 1: Retrieve raw candidates via Hybrid Search (Dense + Lexical + RRF)
         candidates = await self.retriever.retrieve(
             query=req.query,
             scope=scope,
@@ -105,20 +113,35 @@ class QueryService:
                 query_id=query_id,
             )
 
-        # 4. Context Assembly (Token budget + Lost-in-the-Middle permutation)
+        # 4. Stage 2: Cross-Encoder Reranking
+        if req.rerank:
+            candidates = await self.reranker.rerank(
+                query=req.query,
+                candidates=candidates,
+                top_n=req.top_n,
+            )
+
+        # 5. Context Compression (Extractive sentence window)
+        if req.compress_context and self.compressor is not None:
+            candidates = self.compressor.compress(
+                query=req.query,
+                candidates=candidates,
+            )
+
+        # 6. Context Assembly (Token budget + Lost-in-the-Middle permutation)
         built_context = self.context_builder.build(
             candidates=candidates,
             max_context_tokens=req.max_context_tokens,
             enable_lost_in_middle=True,
         )
 
-        # 5. Format grounded prompts
+        # 7. Format grounded prompts
         messages, prompt_ver = self.prompt_manager.format_messages(
             context_text=built_context.context_text,
             question=req.query,
         )
 
-        # 6. Execute LLM generation
+        # 8. Execute LLM generation
         llm_request = LLMRequest(
             messages=messages,
             model=settings.LLM_MODEL,
@@ -128,10 +151,10 @@ class QueryService:
         )
         llm_result = await self.llm_client.generate(llm_request)
 
-        # 7. Check if LLM output indicates abstention
+        # 9. Check if LLM output indicates abstention
         is_abstained = self.prompt_manager.is_abstention(llm_result.content)
 
-        # 8. Extract and verify citations
+        # 10. Extract and verify citations
         citations: list[CitationItem] = []
         if not is_abstained:
             verification = self.citation_verifier.verify(
@@ -142,7 +165,7 @@ class QueryService:
 
         latency_ms = int((time.perf_counter() - start_time) * 1000)
 
-        # 9. Persist telemetry to query_logs and query_citations
+        # 11. Persist telemetry to query_logs and query_citations
         log_record = QueryLog(
             id=query_id,
             tenant_id=current_user.tenant_id,

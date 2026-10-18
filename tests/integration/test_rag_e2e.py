@@ -100,6 +100,23 @@ All communication must occur on the dedicated war-room Slack channel.
             assert len(citations_in_db) == len(data["citations"])
             assert citations_in_db[0].rank == 1
 
+        # 4b. Test direct retrieve endpoint with rerank=True
+        rerank_res = await client.post(
+            "/api/v1/query/retrieve",
+            headers=headers_a,
+            json={
+                "query": "notification time for Severity 1 incidents",
+                "collection_ids": [col_id],
+                "top_k": 5,
+                "rerank": True,
+                "top_n": 2,
+            },
+        )
+        assert rerank_res.status_code == 200
+        rerank_data = rerank_res.json()
+        assert rerank_data["count"] <= 2
+        assert rerank_data["candidates"][0]["retrieval_method"] == "cross_encoder_reranked"
+
         # 5. Abstention Test: Ask question with zero matching context
         abstain_res = await client.post(
             "/api/v1/query",
