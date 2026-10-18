@@ -6,9 +6,26 @@ from app.db.session import get_db
 from app.models.user import User
 from app.rag.retrieval.base import AccessScope
 from app.rag.retrieval.hybrid import HybridRetriever
+from app.schemas.query import QueryRequest, QueryResponse
 from app.schemas.retrieval import CandidateResponse, RetrieveRequest, RetrieveResponse
+from app.services.query_service import QueryService
 
-router = APIRouter(prefix="/query", tags=["Retrieval & Search"])
+router = APIRouter(prefix="/query", tags=["RAG & Search"])
+
+
+@router.post("", response_model=QueryResponse)
+async def ask_rag(
+    req: QueryRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    End-to-End Grounded RAG Generation.
+    Executes Hybrid Retrieval -> Token-budgeted XML Context Assembly ->
+    Resilient LLM Inference -> Citation Grounding Verification -> Telemetry Logging.
+    """
+    service = QueryService(db)
+    return await service.execute_query(req=req, current_user=current_user)
 
 
 @router.post("/retrieve", response_model=RetrieveResponse)

@@ -7,6 +7,7 @@ from app.schemas.auth import (
 )
 from app.schemas.collection import CollectionCreate, CollectionResponse
 from app.schemas.document import DocumentCreate, DocumentResponse
+from app.schemas.query import CitationItem, QueryRequest, QueryResponse
 from app.schemas.retrieval import CandidateResponse, RetrieveRequest, RetrieveResponse
 
 __all__ = [
@@ -22,4 +23,8 @@ __all__ = [
     "CandidateResponse",
     "RetrieveRequest",
     "RetrieveResponse",
+    "QueryRequest",
+    "QueryResponse",
+    "CitationItem",
 ]
+
