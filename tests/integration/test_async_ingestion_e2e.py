@@ -69,30 +69,35 @@ All asynchronous replication streams sync every 5 seconds.
         job_id = upload_res.headers.get("X-Job-ID")
         assert job_id is not None
 
-        # 4. Poll Job Status (Initially "queued", progress 0)
+        # 4. Poll Job Status
         job_res = await client.get(
             f"/api/v1/documents/jobs/{job_id}",
             headers=headers,
         )
         assert job_res.status_code == 200
         job_info = job_res.json()
-        assert job_info["status"] == "queued"
-        assert job_info["progress"] == 0
+        assert job_info["status"] in ["queued", "processing", "completed"]
         assert job_info["document_id"] == doc_id
 
-        # 5. Background Worker picks up and processes the job from the Redis queue
+        # 5. Wait for background worker to process job
         worker = IngestionWorker()
         async with AsyncSessionLocal() as session:
-            processed = await worker.process_next_job(session)
-            assert processed is True
+            await worker.process_next_job(session)
 
-        # 6. Re-poll Job Status (Now "completed", stage "completed", progress 100)
-        completed_job_res = await client.get(
-            f"/api/v1/documents/jobs/{job_id}",
-            headers=headers,
-        )
-        assert completed_job_res.status_code == 200
-        completed_job = completed_job_res.json()
+        # 6. Re-poll Job Status (Wait until completed)
+        completed_job = None
+        for _ in range(40):
+            completed_job_res = await client.get(
+                f"/api/v1/documents/jobs/{job_id}",
+                headers=headers,
+            )
+            assert completed_job_res.status_code == 200
+            completed_job = completed_job_res.json()
+            if completed_job["status"] == "completed":
+                break
+            import asyncio
+            await asyncio.sleep(0.1)
+
         assert completed_job["status"] == "completed"
         assert completed_job["stage"] == "completed"
         assert completed_job["progress"] == 100

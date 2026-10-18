@@ -701,6 +701,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 } else if (currentEvent === 'token') {
                   answerText += dataStr;
                   updateAssistantText(assistantMessageId, answerText);
+                } else if (currentEvent === 'abstention') {
+                  try {
+                    const absData = JSON.parse(dataStr);
+                    answerText = absData.message || 'I do not have enough information in the provided documents to answer this question.';
+                  } catch (_) {
+                    answerText = 'I do not have enough information in the provided documents to answer this question.';
+                  }
+                  finalizeAssistantMessage(assistantMessageId, answerText, [], { abstained: true, groundedness_score: 1.0 });
                 } else if (currentEvent === 'done') {
                   try {
                     const doneMeta = JSON.parse(dataStr);

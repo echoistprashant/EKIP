@@ -159,3 +159,23 @@ class IngestionWorker:
             return False
         await self.process_job(job_data, db)
         return True
+
+
+async def run_ingestion_worker_loop() -> None:
+    """Continuous background loop consuming from Redis Ingestion Queue."""
+    import asyncio
+    from app.db.session import AsyncSessionLocal
+    worker = IngestionWorker()
+    logger.info("Background ingestion queue worker loop active")
+    while True:
+        try:
+            async with AsyncSessionLocal() as session:
+                processed = await worker.process_next_job(session, timeout=1)
+                if not processed:
+                    await asyncio.sleep(0.5)
+        except asyncio.CancelledError:
+            logger.info("Background ingestion queue worker loop stopping")
+            break
+        except Exception as e:
+            logger.warning(f"Error in background ingestion loop: {e}")
+            await asyncio.sleep(1)

@@ -1,5 +1,8 @@
+import asyncio
+from contextlib import asynccontextmanager
 from uuid import uuid4
 from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.collections import router as collections_router
@@ -9,14 +12,26 @@ from app.api.v1.query import router as query_router
 from app.api.v1.evaluation import router as evaluation_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.analytics import router as analytics_router
-from fastapi.responses import HTMLResponse
 from app.ui.dashboard_html import DASHBOARD_HTML
+from app.workers.worker import run_ingestion_worker_loop
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    worker_task = asyncio.create_task(run_ingestion_worker_loop())
+    yield
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="EKIP - Enterprise Knowledge Intelligence Platform",
-        version="0.1.0"
+        version="0.1.0",
+        lifespan=lifespan,
     )
 
     @app.middleware("http")
