@@ -167,10 +167,24 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
 ---
 
-## 💻 Interactive Dashboard
+## 💻 Interactive Dashboard & Live Demo
 
-Open your browser and navigate to:
-👉 **[http://localhost:8000/dashboard](http://localhost:8000/dashboard)**
+The platform can be explored live in cloud production or run locally:
+
+| Deployment | URL | Status | Description |
+| :--- | :--- | :---: | :--- |
+| 🌐 **Live Cloud Demo** | **[https://ekip-rag-platform.onrender.com](https://ekip-rag-platform.onrender.com)** | ![Live](https://img.shields.io/badge/Status-Live-brightgreen) | Hosted on Render with Neon (`pgvector`) & Upstash Redis |
+| 📚 **Swagger API Docs** | **[https://ekip-rag-platform.onrender.com/docs](https://ekip-rag-platform.onrender.com/docs)** | ![Active](https://img.shields.io/badge/Status-Active-blue) | Interactive API exploration & schema |
+| 🩺 **Health Check** | **[https://ekip-rag-platform.onrender.com/api/v1/health](https://ekip-rag-platform.onrender.com/api/v1/health)** | `HTTP 200` | Database and Redis cluster health |
+| 💻 **Local Development** | `http://localhost:8000` | Local | Local development and test instance |
+
+### Try the Live Demo in 30 Seconds:
+1. Open the **[Live Dashboard](https://ekip-rag-platform.onrender.com)**.
+2. Click **"Sign In / Register"** in the navigation bar.
+3. Use the demo credentials or create your own isolated tenant:
+   * **Email:** `admin@enterprise.com`
+   * **Password:** `SecurePassword123!`
+4. Create a knowledge collection, upload any `.pdf`, `.txt`, or `.md` file, and test natural language queries with verified citations `[1]` and zero hallucinations!
 
 ### Dashboard Capabilities:
 1. **RAG Chat Assistant:** Real-time token streaming, query transformation toggle (HyDE, Expansion), and verified citation cards.
