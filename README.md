@@ -9,7 +9,14 @@
 [![FastEmbed](https://img.shields.io/badge/FastEmbed-BAAI%201024--d-orange)](https://github.com/qdrant/fastembed)
 [![Gemini](https://img.shields.io/badge/LLM-Google%20Gemini%20API-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Tests](https://img.shields.io/badge/Tests-56%2F56%20Passing-brightgreen)](tests/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46E3B7?logo=render&logoColor=white)](https://ekip-rag-platform.onrender.com/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+---
+
+> 🚀 **Live Production Deployment:** [https://ekip-rag-platform.onrender.com](https://ekip-rag-platform.onrender.com)  
+> 📚 **Interactive Swagger API Docs:** [https://ekip-rag-platform.onrender.com/docs](https://ekip-rag-platform.onrender.com/docs)  
+> 🩺 **System Health Endpoint:** [https://ekip-rag-platform.onrender.com/api/v1/health](https://ekip-rag-platform.onrender.com/api/v1/health)
 
 ---
 
