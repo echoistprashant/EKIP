@@ -3,619 +3,891 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EKIP — Enterprise Knowledge Intelligence Platform</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Notebook Simulator — Product Roadmap Q3</title>
+  
+  <!-- Google Fonts: Inter (400, 500, 600) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Iconify CDN (solar:* icons) -->
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+
   <script>
     tailwind.config = {
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            sans: ['Inter', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            brand: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              200: '#c7d2fe',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-            }
           }
         }
       }
     }
   </script>
+
   <style>
-    @keyframes pulse-subtle { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .streaming-pulse { animation: pulse-subtle 1.2s infinite; }
-    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    /* Custom scrollbar: 5px width, specific #e4e4e7 thumb color */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #e4e4e7;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #d4d4d8;
+    }
+
+    /* Critical fidelity constraint: contenteditable placeholder pattern */
+    [contenteditable]:empty:before {
+      content: attr(placeholder);
+      color: #a1a1aa;
+      pointer-events: none;
+    }
+
+    [contenteditable]:focus {
+      outline: none;
+    }
+
+    /* Active format button visual state */
+    .fmt-btn.active {
+      background-color: #3f3f46;
+      color: #ffffff;
+    }
   </style>
 </head>
-<body class="h-full bg-slate-50 text-slate-800 font-sans flex flex-col antialiased">
+<body class="bg-white text-zinc-900 h-screen flex overflow-hidden selection:bg-zinc-200/70 font-sans antialiased">
 
-  <!-- TOP APP BAR -->
-  <header class="bg-white border-b border-slate-200/90 sticky top-0 z-40 px-6 py-3 flex items-center justify-between shadow-sm/50">
-    <!-- BRAND / LOGO -->
-    <div class="flex items-center space-x-3.5">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/25 ring-2 ring-brand-100">
-        <i class="fa-solid fa-shapes text-lg"></i>
-      </div>
-      <div>
+  <!-- MOBILE SIDEBAR BACKDROP OVERLAY -->
+  <div id="sidebar-backdrop" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-black/20 backdrop-blur-xs z-30 md:hidden transition-opacity duration-300"></div>
+
+  <!-- SECTION 1: SIDEBAR -->
+  <aside id="sidebar" class="w-64 z-40 bg-[#fbfbfc] border-r border-zinc-200 flex flex-col justify-between transition-all duration-300 md:static md:flex hidden flex-shrink-0">
+    <div class="p-3 space-y-4">
+      <!-- HEADER / LOGO -->
+      <div class="flex items-center justify-between px-2 py-1">
         <div class="flex items-center gap-2.5">
-          <h1 class="text-base font-extrabold tracking-tight text-slate-900">EKIP</h1>
-          <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 font-mono">Enterprise RAG</span>
+          <div class="w-5 h-5 bg-zinc-900 rounded flex items-center justify-center text-white text-[10px] font-bold tracking-tight shadow-xs">
+            NB
+          </div>
+          <span class="text-xs font-semibold text-zinc-800 tracking-tight">Notebook Simulator</span>
         </div>
-        <p class="text-[11px] font-medium text-slate-400">Multi-Tenant Knowledge Intelligence Platform (Free & Local)</p>
-      </div>
-    </div>
-
-    <!-- NAVIGATION SEGMENTED CONTROLS -->
-    <nav class="hidden md:flex bg-slate-100/90 p-1 rounded-xl border border-slate-200">
-      <button onclick="switchTab('chat')" id="tab-btn-chat" class="tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 bg-white text-slate-900 shadow-sm flex items-center gap-2">
-        <i class="fa-solid fa-message text-brand-600"></i> RAG Chat Assistant
-      </button>
-      <button onclick="switchTab('documents')" id="tab-btn-documents" class="tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 flex items-center gap-2">
-        <i class="fa-solid fa-layer-group text-slate-400"></i> Knowledge Ingestion & Queue
-      </button>
-      <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 flex items-center gap-2">
-        <i class="fa-solid fa-chart-simple text-slate-400"></i> System Telemetry & Observability
-      </button>
-    </nav>
-
-    <!-- AUTHENTICATION STATUS -->
-    <div class="flex items-center space-x-3">
-      <div id="user-pill" class="hidden items-center gap-2.5 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="tenant-display" class="font-bold text-slate-800">Acme Corp</span>
-        <span id="role-badge" class="px-2 py-0.5 rounded-md text-[10px] bg-brand-100 text-brand-700 font-bold font-mono">admin</span>
-        <button onclick="logout()" class="text-slate-400 hover:text-rose-600 ml-1.5 transition" title="Sign Out">
-          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        <button onclick="toggleSidebar()" class="md:hidden text-zinc-400 hover:text-zinc-700 p-1">
+          <iconify-icon icon="solar:close-circle-linear" class="text-base"></iconify-icon>
         </button>
       </div>
 
-      <button id="login-modal-btn" onclick="openAuthModal()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm shadow-brand-500/20 transition flex items-center gap-2">
-        <i class="fa-solid fa-lock text-[10px]"></i> Sign In / Register
+      <!-- SEARCH INPUT WITH ⌘K BADGE -->
+      <div class="relative px-1">
+        <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm"></iconify-icon>
+        <input type="text" id="sidebar-search" placeholder="Search..." class="w-full bg-zinc-100/80 border border-zinc-200/80 rounded-lg pl-8 pr-11 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-300 transition">
+        <kbd class="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono text-zinc-400 bg-white border border-zinc-200 px-1 py-0.5 rounded shadow-xs">⌘K</kbd>
+      </div>
+
+      <!-- NAVIGATION: FAVORITES & PRIVATE NOTES -->
+      <nav class="space-y-4 px-1 text-xs">
+        <!-- FAVORITES GROUP -->
+        <div>
+          <div class="px-2 py-1 text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Favorites</div>
+          <div class="mt-1 space-y-0.5">
+            <!-- ACTIVE ITEM: Product Roadmap Q3 -->
+            <a href="#" class="bg-zinc-200/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] text-zinc-900 font-medium px-2.5 py-1.5 rounded-lg flex items-center gap-2 transition duration-300">
+              <iconify-icon icon="solar:document-text-linear" class="text-zinc-700 text-sm"></iconify-icon>
+              <span class="truncate">Product Roadmap Q3</span>
+            </a>
+            <a href="#" class="text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900 px-2.5 py-1.5 rounded-lg flex items-center gap-2 transition duration-300">
+              <iconify-icon icon="solar:folder-linear" class="text-zinc-400 text-sm"></iconify-icon>
+              <span class="truncate">Engineering Specs</span>
+            </a>
+            <a href="#" class="text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900 px-2.5 py-1.5 rounded-lg flex items-center gap-2 transition duration-300">
+              <iconify-icon icon="solar:star-linear" class="text-zinc-400 text-sm"></iconify-icon>
+              <span class="truncate">Design System v2</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- PRIVATE NOTES GROUP -->
+        <div>
+          <div class="px-2 py-1 text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Private Notes</div>
+          <div class="mt-1 space-y-0.5">
+            <a href="#" class="text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900 px-2.5 py-1.5 rounded-lg flex items-center gap-2 transition duration-300">
+              <iconify-icon icon="solar:notes-linear" class="text-zinc-400 text-sm"></iconify-icon>
+              <span class="truncate">Sprint Planning</span>
+            </a>
+            <a href="#" class="text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900 px-2.5 py-1.5 rounded-lg flex items-center gap-2 transition duration-300">
+              <iconify-icon icon="solar:document-text-linear" class="text-zinc-400 text-sm"></iconify-icon>
+              <span class="truncate">Security & Compliance</span>
+            </a>
+            <a href="#" class="text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900 px-2.5 py-1.5 rounded-lg flex items-center gap-2 transition duration-300">
+              <iconify-icon icon="solar:code-linear" class="text-zinc-400 text-sm"></iconify-icon>
+              <span class="truncate">API Reference Docs</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- EKIP KNOWLEDGE & AI -->
+        <div>
+          <div class="px-2 py-1 text-[11px] font-medium text-zinc-400 uppercase tracking-wider">AI Knowledge Base</div>
+          <div class="mt-1 space-y-0.5">
+            <button onclick="openKnowledgeModal()" class="w-full text-left text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900 px-2.5 py-1.5 rounded-lg flex items-center justify-between transition duration-300">
+              <div class="flex items-center gap-2">
+                <iconify-icon icon="solar:database-linear" class="text-zinc-400 text-sm"></iconify-icon>
+                <span class="truncate">Documents & Collections</span>
+              </div>
+              <span id="sidebar-doc-count" class="text-[10px] bg-zinc-200/60 px-1.5 py-0.2 rounded font-mono">0</span>
+            </button>
+            <button onclick="toggleAIPanel()" class="w-full text-left text-indigo-700 bg-indigo-50/60 hover:bg-indigo-100/60 px-2.5 py-1.5 rounded-lg flex items-center justify-between transition duration-300 font-medium">
+              <div class="flex items-center gap-2">
+                <iconify-icon icon="solar:magic-stick-3-linear" class="text-indigo-600 text-sm"></iconify-icon>
+                <span class="truncate">EKIP Grounded AI</span>
+              </div>
+              <span class="text-[9px] bg-indigo-100 text-indigo-700 px-1 rounded font-bold">RAG</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <!-- USER FOOTER (Alex Doe with exact dicebear avatar) -->
+    <div onclick="openAuthModal()" class="flex items-center justify-between p-3 border-t border-zinc-200 hover:bg-zinc-100/60 transition cursor-pointer select-none">
+      <div class="flex items-center gap-2.5">
+        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Alex&backgroundColor=e4e4e7" class="w-7 h-7 rounded-full border border-zinc-200" alt="Alex Doe">
+        <div class="text-left">
+          <div id="sidebar-user-name" class="text-xs font-semibold text-zinc-800 leading-tight">Alex Doe</div>
+          <div id="sidebar-tenant-name" class="text-[10px] text-zinc-400 leading-tight">Enterprise Workspace</div>
+        </div>
+      </div>
+      <iconify-icon icon="solar:alt-arrow-up-linear" class="text-zinc-400 text-xs"></iconify-icon>
+    </div>
+  </aside>
+
+  <!-- MAIN WORKSPACE CONTAINER -->
+  <main class="flex-1 flex flex-col h-full overflow-hidden bg-white relative">
+    
+    <!-- SECTION 2: TOPBAR -->
+    <header class="h-12 sticky top-0 z-30 backdrop-blur-md bg-white/90 border-b border-zinc-200 px-4 sm:px-8 flex items-center justify-between">
+      <!-- LEFT: MOBILE TOGGLE & BREADCRUMBS -->
+      <div class="flex items-center gap-2">
+        <button id="sidebar-toggle-btn" onclick="toggleSidebar()" class="md:hidden mr-1 text-zinc-600 hover:text-zinc-900 p-1.5 rounded-lg hover:bg-zinc-100 transition">
+          <iconify-icon icon="solar:hamburger-menu-linear" class="text-base"></iconify-icon>
+        </button>
+        <div class="flex items-center gap-1.5 text-xs text-zinc-500 font-medium">
+          <span class="hover:underline decoration-zinc-300 underline-offset-4 cursor-pointer">Workspace</span>
+          <span class="text-zinc-300">/</span>
+          <span class="text-zinc-900 font-semibold hover:underline decoration-zinc-300 underline-offset-4 cursor-pointer">Product Roadmap Q3</span>
+        </div>
+      </div>
+
+      <!-- RIGHT: MODE TOGGLE & ACTION BUTTONS -->
+      <div class="flex items-center gap-2">
+        <!-- MODE TOGGLE (Edit vs View) -->
+        <div class="flex items-center gap-1.5 text-xs text-zinc-500 mr-2">
+          <span id="mode-label-view" class="font-medium text-zinc-400">View</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="mode-toggle" checked onchange="handleModeToggle(this)" class="sr-only peer">
+            <div class="w-8 h-4 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-zinc-900"></div>
+          </label>
+          <span id="mode-label-edit" class="font-medium text-zinc-900">Edit</span>
+        </div>
+
+        <!-- ACTION: CLOCK CIRCLE -->
+        <button title="Page History" class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition duration-300 hover:scale-110">
+          <iconify-icon icon="solar:clock-circle-linear" class="text-base"></iconify-icon>
+        </button>
+
+        <!-- ACTION: MENU DOTS CIRCLE -->
+        <button title="More Settings" class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition duration-300 hover:scale-110">
+          <iconify-icon icon="solar:menu-dots-circle-linear" class="text-base"></iconify-icon>
+        </button>
+
+        <!-- ACTION: ASK AI PILL -->
+        <button id="topbar-ai-btn" onclick="toggleAIPanel()" class="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200/80 text-zinc-900 text-xs font-semibold transition duration-300 flex items-center gap-1.5 border border-zinc-200 hover:scale-105">
+          <iconify-icon icon="solar:magic-stick-3-linear" class="text-indigo-600 text-sm"></iconify-icon>
+          <span class="hidden sm:inline">Ask AI</span>
+        </button>
+
+        <!-- PRIMARY: SHARE BUTTON -->
+        <button id="share-btn" onclick="handleShareClick()" class="ml-1 px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition duration-300 hover:shadow-lg flex items-center gap-1.5">
+          Share
+        </button>
+      </div>
+    </header>
+
+    <!-- SECTION 3: MAIN EDITOR CONTENT -->
+    <div id="editor-viewport" class="flex-1 overflow-y-auto px-6 sm:px-16 py-10">
+      <div class="max-w-3xl mx-auto space-y-6">
+
+        <!-- TITLE WITH QUIRK MARGIN & HOVER EMOJI AT -left-12 -->
+        <div class="relative group">
+          <button class="absolute -left-12 top-2.5 opacity-0 group-hover:opacity-100 transition duration-300 text-zinc-400 hover:text-zinc-800 p-1.5 rounded-lg hover:bg-zinc-100 hover:scale-110" title="Change Emoji / Icon">
+            <iconify-icon icon="solar:emoji-keyboard-linear" class="text-xl"></iconify-icon>
+          </button>
+          <h1 id="main-doc-title" contenteditable="true" placeholder="Untitled Document" class="-ml-2 p-2 text-4xl sm:text-5xl font-bold tracking-tight text-zinc-900 outline-none leading-tight rounded-lg">Product Roadmap Q3</h1>
+        </div>
+
+        <!-- METADATA ROW (contenteditable="false") -->
+        <div contenteditable="false" class="flex flex-wrap items-center gap-4 text-xs text-zinc-500 py-3 border-b border-zinc-100 select-none">
+          <div class="flex items-center gap-1.5">
+            <iconify-icon icon="solar:calendar-linear" class="text-zinc-400 text-sm"></iconify-icon>
+            <span>July 1 – September 30, 2026</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Alex&backgroundColor=e4e4e7" class="w-4 h-4 rounded-full border border-zinc-200" alt="Alex">
+            <span>Alex Doe</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="bg-zinc-100/80 border border-zinc-200 text-zinc-700 font-medium px-2 py-0.5 rounded text-[11px]">Planning</span>
+            <span class="bg-zinc-100/80 border border-zinc-200 text-zinc-700 font-medium px-2 py-0.5 rounded text-[11px]">Q3</span>
+          </div>
+        </div>
+
+        <!-- INTRO PARAGRAPH -->
+        <p contenteditable="true" placeholder="Type something, or press '/' for commands..." class="text-zinc-800 text-base leading-relaxed outline-none">
+          This roadmap establishes the foundational architecture for EKIP's next-generation enterprise retrieval pipeline. All key results emphasize zero-hallucination verification, sub-50ms hybrid retrieval without GPU dependencies, and strictly isolated multi-tenant workspaces.
+        </p>
+
+        <!-- SUBHEADING -->
+        <h2 contenteditable="true" placeholder="Heading 2" class="text-xl font-bold text-zinc-900 mt-8 mb-2 outline-none tracking-tight">
+          Milestones & Deliverables
+        </h2>
+
+        <!-- CHECKLIST ITEMS (Quirk: -ml-1.5, grab handle at -left-6, custom SVG tick M5 13l4 4L19 7) -->
+        <ul class="space-y-2.5 my-4">
+          <li class="group relative flex items-start gap-2.5 -ml-1.5 p-1 rounded-md hover:bg-zinc-50/60 transition duration-300">
+            <span class="absolute -left-6 top-1.5 opacity-0 group-hover:opacity-100 transition duration-300 cursor-grab text-zinc-300 hover:text-zinc-600">
+              <iconify-icon icon="solar:menu-dots-bold" class="text-base"></iconify-icon>
+            </span>
+            <label class="relative flex items-center justify-center mt-1 cursor-pointer">
+              <input type="checkbox" checked onchange="toggleTaskText(this)" class="peer sr-only">
+              <div class="w-4 h-4 rounded border border-zinc-300 peer-checked:bg-zinc-900 peer-checked:border-zinc-900 flex items-center justify-center transition">
+                <svg class="w-3.5 h-3.5 text-white pointer-events-none stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+            </label>
+            <span contenteditable="true" class="task-text text-sm text-zinc-800 outline-none flex-1 line-through text-zinc-400">Implement Hybrid Dense (FastEmbed) + Lexical (PostgreSQL GIN) search with Reciprocal Rank Fusion</span>
+          </li>
+
+          <li class="group relative flex items-start gap-2.5 -ml-1.5 p-1 rounded-md hover:bg-zinc-50/60 transition duration-300">
+            <span class="absolute -left-6 top-1.5 opacity-0 group-hover:opacity-100 transition duration-300 cursor-grab text-zinc-300 hover:text-zinc-600">
+              <iconify-icon icon="solar:menu-dots-bold" class="text-base"></iconify-icon>
+            </span>
+            <label class="relative flex items-center justify-center mt-1 cursor-pointer">
+              <input type="checkbox" checked onchange="toggleTaskText(this)" class="peer sr-only">
+              <div class="w-4 h-4 rounded border border-zinc-300 peer-checked:bg-zinc-900 peer-checked:border-zinc-900 flex items-center justify-center transition">
+                <svg class="w-3.5 h-3.5 text-white pointer-events-none stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+            </label>
+            <span contenteditable="true" class="task-text text-sm text-zinc-800 outline-none flex-1 line-through text-zinc-400">Two-tier Redis semantic cache with vector cosine similarity thresholding (5ms repeat queries)</span>
+          </li>
+
+          <li class="group relative flex items-start gap-2.5 -ml-1.5 p-1 rounded-md hover:bg-zinc-50/60 transition duration-300">
+            <span class="absolute -left-6 top-1.5 opacity-0 group-hover:opacity-100 transition duration-300 cursor-grab text-zinc-300 hover:text-zinc-600">
+              <iconify-icon icon="solar:menu-dots-bold" class="text-base"></iconify-icon>
+            </span>
+            <label class="relative flex items-center justify-center mt-1 cursor-pointer">
+              <input type="checkbox" onchange="toggleTaskText(this)" class="peer sr-only">
+              <div class="w-4 h-4 rounded border border-zinc-300 peer-checked:bg-zinc-900 peer-checked:border-zinc-900 flex items-center justify-center transition">
+                <svg class="w-3.5 h-3.5 text-white pointer-events-none stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+            </label>
+            <span contenteditable="true" class="task-text text-sm text-zinc-800 outline-none flex-1">Stage 2 Cross-Encoder reranking and Lost-in-the-Middle context prompt assembly</span>
+          </li>
+
+          <li class="group relative flex items-start gap-2.5 -ml-1.5 p-1 rounded-md hover:bg-zinc-50/60 transition duration-300">
+            <span class="absolute -left-6 top-1.5 opacity-0 group-hover:opacity-100 transition duration-300 cursor-grab text-zinc-300 hover:text-zinc-600">
+              <iconify-icon icon="solar:menu-dots-bold" class="text-base"></iconify-icon>
+            </span>
+            <label class="relative flex items-center justify-center mt-1 cursor-pointer">
+              <input type="checkbox" onchange="toggleTaskText(this)" class="peer sr-only">
+              <div class="w-4 h-4 rounded border border-zinc-300 peer-checked:bg-zinc-900 peer-checked:border-zinc-900 flex items-center justify-center transition">
+                <svg class="w-3.5 h-3.5 text-white pointer-events-none stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+            </label>
+            <span contenteditable="true" class="task-text text-sm text-zinc-800 outline-none flex-1">Real-time sentence-level citation verification [1] with automatic out-of-domain refusal</span>
+          </li>
+        </ul>
+
+        <!-- BLOCKQUOTE (Quirk: border-l-[3px] border-zinc-300, bg-zinc-50/50) -->
+        <blockquote contenteditable="true" placeholder="Empty blockquote" class="border-l-[3px] border-zinc-300 bg-zinc-50/50 p-4 my-6 text-sm text-zinc-700 italic rounded-r-lg outline-none leading-relaxed">
+          "Quality in knowledge retrieval is not an accident; it is the deliberate result of hybrid search, deep cross-encoder re-ranking, and strict ground truth verification."
+        </blockquote>
+
+        <!-- CODE BLOCK (TypeScript with Pink: #db2777, Blue: #2563eb, Green: #16a34a & Group-hover Copy button) -->
+        <div class="relative group my-6 bg-[#fbfbfc] border border-zinc-200 rounded-xl p-4 font-mono text-sm overflow-x-auto shadow-xs">
+          <div class="flex items-center justify-between text-xs text-zinc-400 pb-2 mb-2 border-b border-zinc-100 select-none">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-zinc-200"></span>
+              <span>hybrid_retrieval.ts</span>
+            </div>
+            <button id="copy-code-btn" onclick="handleCopyCode()" class="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-zinc-200 text-zinc-600 hover:text-zinc-900 text-xs transition duration-300 hover:scale-110 shadow-xs">
+              <iconify-icon icon="solar:copy-linear" id="copy-code-icon" class="text-sm"></iconify-icon>
+              <span id="copy-code-text">Copy</span>
+            </button>
+          </div>
+          <pre class="leading-relaxed"><code><span style="color: #db2777;">interface</span> <span style="color: #2563eb;">RetrievedChunk</span> {
+  <span style="color: #2563eb;">id</span>: <span style="color: #2563eb;">string</span>;
+  <span style="color: #2563eb;">score</span>: <span style="color: #2563eb;">number</span>;
+  <span style="color: #2563eb;">content</span>: <span style="color: #2563eb;">string</span>;
+  <span style="color: #2563eb;">isGrounded</span>: <span style="color: #2563eb;">boolean</span>;
+}
+
+<span style="color: #db2777;">export async function</span> <span style="color: #2563eb;">executeRRFHybridSearch</span>(
+  <span style="color: #2563eb;">query</span>: <span style="color: #2563eb;">string</span>,
+  <span style="color: #2563eb;">tenantId</span>: <span style="color: #2563eb;">string</span>
+): <span style="color: #2563eb;">Promise</span>&lt;<span style="color: #2563eb;">RetrievedChunk</span>[]&gt; {
+  <span style="color: #db2777;">const</span> response = <span style="color: #db2777;">await</span> fetch(<span style="color: #16a34a;">`/api/v1/query?tenant=${tenantId}`</span>, {
+    <span style="color: #2563eb;">method</span>: <span style="color: #16a34a;">'POST'</span>,
+    <span style="color: #2563eb;">body</span>: JSON.stringify({ query, top_k: <span style="color: #2563eb;">5</span> })
+  });
+  <span style="color: #db2777;">return</span> response.json();
+}</code></pre>
+        </div>
+
+        <!-- ADDITIONAL EDITABLE PARAGRAPH -->
+        <p contenteditable="true" placeholder="Write down next steps or notes..." class="text-zinc-800 text-sm leading-relaxed outline-none pt-2">
+          Use the floating formatting toolbar below to format selected text. Click <strong>Ask AI</strong> in the top header or sidebar to query your enterprise documents and insert verified answers directly into this editor.
+        </p>
+
+      </div>
+    </div>
+
+    <!-- CRITICAL CONSTRAINT: FLOATING FORMATTING TOOLBAR ANCHORED AT bottom-8 -->
+    <div id="format-toolbar" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-30 bg-zinc-900 text-white rounded-2xl px-3 py-1.5 shadow-2xl flex items-center gap-1 border border-zinc-800 backdrop-blur-md transition-all duration-300">
+      <button onclick="formatDoc('bold')" title="Bold (⌘B)" class="fmt-btn p-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition">
+        <iconify-icon icon="solar:text-bold-linear" class="text-base"></iconify-icon>
+      </button>
+      <button onclick="formatDoc('italic')" title="Italic (⌘I)" class="fmt-btn p-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition">
+        <iconify-icon icon="solar:text-italic-linear" class="text-base"></iconify-icon>
+      </button>
+      <button onclick="formatDoc('underline')" title="Underline (⌘U)" class="fmt-btn p-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition">
+        <iconify-icon icon="solar:text-underline-linear" class="text-base"></iconify-icon>
+      </button>
+      <button onclick="formatDoc('strikeThrough')" title="Strikethrough" class="fmt-btn p-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition">
+        <iconify-icon icon="solar:text-cross-linear" class="text-base"></iconify-icon>
+      </button>
+      <div class="h-4 w-[1px] bg-zinc-700 mx-1"></div>
+      <button onclick="formatDoc('insertUnorderedList')" title="Bullet List" class="fmt-btn p-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition">
+        <iconify-icon icon="solar:list-linear" class="text-base"></iconify-icon>
+      </button>
+      <button onclick="formatDoc('insertOrderedList')" title="Numbered List" class="fmt-btn p-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition">
+        <iconify-icon icon="solar:list-1-linear" class="text-base"></iconify-icon>
+      </button>
+      <button onclick="insertCodeSnippet()" title="Code Block" class="fmt-btn p-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800 transition">
+        <iconify-icon icon="solar:code-linear" class="text-base"></iconify-icon>
+      </button>
+      <div class="h-4 w-[1px] bg-zinc-700 mx-1"></div>
+      <button onclick="toggleAIPanel()" title="Ask AI at Cursor" class="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1 transition">
+        <iconify-icon icon="solar:magic-stick-3-linear" class="text-xs"></iconify-icon>
+        <span>AI</span>
       </button>
     </div>
-  </header>
-
-  <!-- WORKSPACE VIEWPORT -->
-  <main class="flex-1 flex overflow-hidden">
-
-    <!-- ========================================== -->
-    <!-- TAB 1: RAG CHAT ASSISTANT -->
-    <!-- ========================================== -->
-    <section id="view-chat" class="flex-1 flex overflow-hidden">
-      <!-- SIDEBAR CONTROLS -->
-      <aside class="w-80 border-r border-slate-200 bg-white p-5 flex flex-col justify-between overflow-y-auto custom-scrollbar">
-        <div class="space-y-6">
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Knowledge Collection</label>
-            <div class="relative">
-              <select id="chat-collection-select" class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
-                <option value="">Loading collections...</option>
-              </select>
-              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                <i class="fa-solid fa-chevron-down text-[10px]"></i>
-              </div>
-            </div>
-            <p class="text-[11px] text-slate-500 mt-1.5 font-medium">Scans isolated tenant partition only.</p>
-          </div>
-
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Query Transformation</label>
-            <div class="relative">
-              <select id="chat-strategy-select" class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
-                <option value="none">Standard Hybrid RRF</option>
-                <option value="hyde">HyDE (Hypothetical Doc Embedding)</option>
-                <option value="expansion">Multi-Query Expansion</option>
-                <option value="rewrite">Query Rewriter</option>
-              </select>
-              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                <i class="fa-solid fa-chevron-down text-[10px]"></i>
-              </div>
-            </div>
-            <p class="text-[11px] text-slate-500 mt-1.5 font-medium">Reformulates queries before vector retrieval.</p>
-          </div>
-
-          <div class="border-t border-slate-100 pt-5 space-y-3.5">
-            <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Pipeline Safeguards</span>
-            
-            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
-              <span class="text-xs font-semibold text-slate-700">Real-Time Streaming (SSE)</span>
-              <input type="checkbox" id="chat-stream-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
-            </label>
-
-            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
-              <span class="text-xs font-semibold text-slate-700">Cross-Encoder Reranker</span>
-              <input type="checkbox" id="chat-rerank-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
-            </label>
-
-            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
-              <span class="text-xs font-semibold text-slate-700">Context Compression</span>
-              <input type="checkbox" id="chat-compress-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
-            </label>
-          </div>
-        </div>
-
-        <div class="border-t border-slate-100 pt-5 text-[11px] space-y-2">
-          <div class="flex items-center justify-between text-slate-500">
-            <span>Embeddings:</span>
-            <span class="font-mono font-semibold text-slate-800">1024-d BAAI (CPU)</span>
-          </div>
-          <div class="flex items-center justify-between text-slate-500">
-            <span>Semantic Cache:</span>
-            <span class="font-mono font-semibold text-emerald-600">Redis L1/L2 Active</span>
-          </div>
-          <div class="flex items-center justify-between text-slate-500">
-            <span>Query Cost:</span>
-            <span class="font-mono font-bold text-emerald-600">$0.00 / query</span>
-          </div>
-        </div>
-      </aside>
-
-      <!-- CHAT THREAD CANVAS -->
-      <div class="flex-1 flex flex-col bg-slate-50/70">
-        <!-- MESSAGES FEED -->
-        <div id="chat-messages" class="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar">
-          <!-- WELCOME MESSAGE BUBBLE -->
-          <div class="flex gap-4 text-sm max-w-3xl">
-            <div class="w-9 h-9 rounded-xl bg-white border border-slate-200 text-brand-600 shadow-sm flex items-center justify-center shrink-0">
-              <i class="fa-solid fa-robot"></i>
-            </div>
-            <div class="bg-white border border-slate-200/90 rounded-2xl p-5 text-slate-700 space-y-2 shadow-sm">
-              <p class="font-bold text-slate-900 text-sm">Welcome to the Enterprise Knowledge Assistant</p>
-              <p class="text-xs text-slate-600 leading-relaxed font-normal">
-                I generate answers grounded strictly in your enterprise knowledge documents. Every factual claim is verified with numbered source citations <span class="font-mono font-bold text-brand-700 bg-brand-50 px-1 py-0.5 rounded border border-brand-200">[1]</span>, evaluated by RAG Triad guardrails, with zero hallucination guarantee.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- FLOATING PROMPT INPUT CAPSULE -->
-        <div class="p-4 md:p-6 bg-gradient-to-t from-white via-white/90 to-transparent">
-          <form onsubmit="handleSendQuery(event)" class="max-w-4xl mx-auto flex gap-3 bg-white border border-slate-300/80 rounded-2xl p-1.5 shadow-lg shadow-slate-200/60 focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-600 transition">
-            <input type="text" id="chat-input" placeholder="Ask a question about your uploaded documents..." 
-                   class="flex-1 bg-transparent px-4 py-2.5 text-xs md:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none">
-            <button type="submit" id="send-btn" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md shadow-brand-500/25 transition flex items-center gap-2">
-              <span>Send</span> <i class="fa-solid fa-arrow-up text-[10px]"></i>
-            </button>
-          </form>
-        </div>
-      </div>
-    </section>
-
-    <!-- ========================================== -->
-    <!-- TAB 2: DOCUMENTS & INGESTION QUEUE -->
-    <!-- ========================================== -->
-    <section id="view-documents" class="hidden flex-1 overflow-y-auto p-8 bg-slate-50 custom-scrollbar">
-      <div class="max-w-6xl mx-auto space-y-8">
-        <!-- HEADER & ACTIONS -->
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-bold text-slate-900">Knowledge Ingestion & Queue</h2>
-            <p class="text-xs text-slate-500 font-medium mt-0.5">Upload enterprise documents into isolated collections with structural chunking and async background queues.</p>
-          </div>
-          <button onclick="openCreateCollectionModal()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm flex items-center gap-2 transition">
-            <i class="fa-solid fa-plus text-[10px]"></i> New Collection
-          </button>
-        </div>
-
-        <!-- UPLOAD SECTION -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="md:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <i class="fa-solid fa-cloud-arrow-up text-brand-600"></i> Document Dropzone
-            </h3>
-            
-            <form id="upload-form" onsubmit="handleUploadDocument(event)" class="space-y-4">
-              <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Target Collection</label>
-                <div class="relative">
-                  <select id="upload-collection-select" required class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-brand-600">
-                    <option value="">Select a collection...</option>
-                  </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
-                  </div>
-                </div>
-              </div>
-
-              <!-- DRAG DROP CONTAINER -->
-              <div id="drop-area" class="border-2 border-dashed border-slate-200 hover:border-brand-500 rounded-2xl p-8 text-center cursor-pointer transition bg-slate-50/60 group"
-                   onclick="document.getElementById('file-input').click()">
-                <input type="file" id="file-input" class="hidden" accept=".pdf,.md,.txt">
-                <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition">
-                  <i class="fa-solid fa-file-pdf text-xl text-brand-600"></i>
-                </div>
-                <p id="file-chosen-text" class="text-xs text-slate-700 font-bold">Click to browse or drag and drop files here</p>
-                <p class="text-[11px] text-slate-400 mt-1">Supports Markdown (.md), PDF (.pdf), Text (.txt) up to 50 MB</p>
-              </div>
-
-              <div class="flex items-center justify-between pt-2">
-                <label class="flex items-center gap-2.5 text-xs text-slate-600 font-medium cursor-pointer">
-                  <input type="checkbox" id="upload-async-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300">
-                  <span>Asynchronous Background Task Queue (Redis)</span>
-                </label>
-                <button type="submit" id="upload-submit-btn" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm transition">
-                  Ingest Document
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- ACTIVE TASK MONITOR -->
-          <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-            <div>
-              <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-2">
-                <i class="fa-solid fa-bolt text-amber-500"></i> Active Task Worker
-              </h3>
-              <p class="text-xs text-slate-500 font-medium mb-4">Background task status and stage execution.</p>
-              
-              <div id="active-job-box" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-                <div class="flex items-center justify-between text-xs font-bold">
-                  <span class="text-slate-800 truncate max-w-[160px]" id="job-doc-name">Document</span>
-                  <span id="job-status-pill" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200">queued</span>
-                </div>
-                <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                  <div id="job-progress-bar" class="bg-brand-600 h-2 transition-all duration-300 rounded-full" style="width: 0%"></div>
-                </div>
-                <div class="flex justify-between text-[11px] font-semibold text-slate-500">
-                  <span id="job-stage-text">Stage: queued</span>
-                  <span id="job-progress-text" class="font-mono">0%</span>
-                </div>
-              </div>
-
-              <div id="no-active-job" class="text-center py-10 text-slate-400 text-xs font-medium">
-                No active ingestion tasks running.
-              </div>
-            </div>
-
-            <div class="text-[11px] text-slate-500 pt-4 border-t border-slate-100 flex items-center gap-1.5 font-medium">
-              <i class="fa-solid fa-circle-check text-emerald-500"></i>
-              <span>Worker Daemon Active on Redis Port 6379</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- REPOSITORY TABLE -->
-        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Document Repository</h3>
-            <button onclick="loadDocumentsList()" class="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1.5">
-              <i class="fa-solid fa-rotate-right text-[11px]"></i> Refresh
-            </button>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
-              <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200/80">
-                <tr>
-                  <th class="px-6 py-3.5">Document Title</th>
-                  <th class="px-6 py-3.5">MIME Type</th>
-                  <th class="px-6 py-3.5">Content Hash</th>
-                  <th class="px-6 py-3.5">Status</th>
-                  <th class="px-6 py-3.5">Created</th>
-                </tr>
-              </thead>
-              <tbody id="documents-table-body" class="divide-y divide-slate-100 text-slate-700 font-medium">
-                <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">Loading documents...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ========================================== -->
-    <!-- TAB 3: ANALYTICS & OBSERVABILITY -->
-    <!-- ========================================== -->
-    <section id="view-analytics" class="hidden flex-1 overflow-y-auto p-8 bg-slate-50 custom-scrollbar">
-      <div class="max-w-6xl mx-auto space-y-8">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-bold text-slate-900">System Telemetry & Quality Overview</h2>
-            <p class="text-xs text-slate-500 font-medium mt-0.5">Real-time telemetry, cache hit efficiency, LLM costs, and RAG Triad quality metrics.</p>
-          </div>
-          <button onclick="loadAnalyticsOverview()" class="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 border border-slate-200 shadow-sm flex items-center gap-2 transition">
-            <i class="fa-solid fa-rotate text-[10px]"></i> Refresh Telemetry
-          </button>
-        </div>
-
-        <!-- 6 KPI CARDS -->
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Queries</span>
-            <p id="kpi-queries" class="text-2xl font-extrabold text-slate-900 mt-1.5 font-mono">0</p>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Cache Hit Rate</span>
-            <p id="kpi-cache-rate" class="text-2xl font-extrabold text-emerald-600 mt-1.5 font-mono">0.0%</p>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Average Latency</span>
-            <p id="kpi-latency" class="text-2xl font-extrabold text-brand-600 mt-1.5 font-mono">0 ms</p>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Cost</span>
-            <p id="kpi-cost" class="text-2xl font-extrabold text-emerald-600 mt-1.5 font-mono">$0.0000</p>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Hallucination Rate</span>
-            <p id="kpi-hallucination" class="text-2xl font-extrabold text-amber-600 mt-1.5 font-mono">0.0%</p>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">User Satisfaction</span>
-            <p id="kpi-satisfaction" class="text-2xl font-extrabold text-indigo-600 mt-1.5 font-mono">100%</p>
-          </div>
-        </div>
-
-        <!-- RAG TRIAD QUALITY AUDIT -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold text-slate-700">Groundedness (Faithfulness)</span>
-              <span id="score-groundedness" class="text-sm font-extrabold text-emerald-600 font-mono">1.00</span>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-2 mb-3 overflow-hidden">
-              <div id="bar-groundedness" class="bg-emerald-500 h-2 rounded-full" style="width: 100%"></div>
-            </div>
-            <p class="text-[11px] text-slate-500 font-medium">Verifies that claims in the answer are strictly supported by retrieved context.</p>
-          </div>
-
-          <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold text-slate-700">Context Relevance</span>
-              <span id="score-context" class="text-sm font-extrabold text-brand-600 font-mono">1.00</span>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-2 mb-3 overflow-hidden">
-              <div id="bar-context" class="bg-brand-600 h-2 rounded-full" style="width: 100%"></div>
-            </div>
-            <p class="text-[11px] text-slate-500 font-medium">Measures lexical & semantic alignment between user question and chunks.</p>
-          </div>
-
-          <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold text-slate-700">Answer Relevance</span>
-              <span id="score-answer" class="text-sm font-extrabold text-indigo-600 font-mono">1.00</span>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-2 mb-3 overflow-hidden">
-              <div id="bar-answer" class="bg-indigo-600 h-2 rounded-full" style="width: 100%"></div>
-            </div>
-            <p class="text-[11px] text-slate-500 font-medium">Ensures the generated answer directly addresses the user query.</p>
-          </div>
-        </div>
-
-        <!-- MODEL CONSUMPTION TABLE -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4">Model Cost & Distribution Breakdown</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
-              <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
-                <tr>
-                  <th class="px-6 py-3.5">Model / Source</th>
-                  <th class="px-6 py-3.5">Executions</th>
-                  <th class="px-6 py-3.5">Cumulative Cost</th>
-                  <th class="px-6 py-3.5">Efficiency</th>
-                </tr>
-              </thead>
-              <tbody id="models-table-body" class="divide-y divide-slate-100 text-slate-700 font-medium">
-                <tr><td colspan="4" class="px-6 py-6 text-center text-slate-400">No query data recorded yet</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
 
   </main>
 
-  <!-- ========================================== -->
-  <!-- MODALS -->
-  <!-- ========================================== -->
+  <!-- SLIDE-OVER NOTION AI / EKIP COPILOT PANEL -->
+  <div id="ai-panel" class="fixed top-0 right-0 h-full w-96 bg-white border-l border-zinc-200 z-50 shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out">
+    <div class="p-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/50">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xs shadow-xs">
+          <iconify-icon icon="solar:magic-stick-3-linear"></iconify-icon>
+        </div>
+        <div>
+          <h3 class="text-xs font-bold text-zinc-900 leading-tight">EKIP Grounded AI Copilot</h3>
+          <p class="text-[10px] text-zinc-400">Strictly verified enterprise answers</p>
+        </div>
+      </div>
+      <button onclick="toggleAIPanel()" class="text-zinc-400 hover:text-zinc-700 p-1 rounded-md hover:bg-zinc-100 transition">
+        <iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon>
+      </button>
+    </div>
+
+    <!-- AI CHAT HISTORY -->
+    <div id="ai-messages" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+      <div class="p-3 rounded-xl bg-zinc-100/70 border border-zinc-200/60 text-zinc-700 space-y-1">
+        <div class="font-semibold text-zinc-900 flex items-center gap-1.5">
+          <iconify-icon icon="solar:shield-check-linear" class="text-emerald-600"></iconify-icon>
+          Zero Hallucination Assistant
+        </div>
+        <p class="leading-relaxed">
+          Ask questions against your uploaded documents. Responses include exact citations <span class="text-indigo-600 font-bold">[1]</span> and can be inserted straight into your document.
+        </p>
+      </div>
+    </div>
+
+    <!-- AI PROMPT INPUT & CONTROLS -->
+    <div class="p-4 border-t border-zinc-200 bg-white space-y-2">
+      <div class="flex items-center justify-between text-[11px] text-zinc-500">
+        <span id="ai-status">Ready</span>
+        <button onclick="openKnowledgeModal()" class="text-indigo-600 hover:underline">Manage Knowledge</button>
+      </div>
+      <div class="relative">
+        <textarea id="ai-input" rows="2" placeholder="Ask anything about your documents..." onkeydown="handleAIKeyDown(event)" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-2.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+        <button onclick="submitAIQuery()" class="absolute right-2.5 bottom-2.5 p-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg transition hover:scale-105">
+          <iconify-icon icon="solar:arrow-up-linear" class="text-xs"></iconify-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KNOWLEDGE BASE & DOCUMENT UPLOAD MODAL -->
+  <div id="knowledge-modal" class="hidden fixed inset-0 bg-black/30 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white border border-zinc-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-zinc-100 pb-3">
+        <div class="flex items-center gap-2">
+          <iconify-icon icon="solar:database-linear" class="text-zinc-700 text-lg"></iconify-icon>
+          <h3 class="text-sm font-bold text-zinc-900">Enterprise Documents & Collections</h3>
+        </div>
+        <button onclick="closeKnowledgeModal()" class="text-zinc-400 hover:text-zinc-700">
+          <iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon>
+        </button>
+      </div>
+
+      <!-- CREATE COLLECTION -->
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold text-zinc-700">Create New Collection</label>
+        <div class="flex gap-2">
+          <input type="text" id="new-collection-name" placeholder="e.g. Q3 Roadmap Docs" class="flex-1 bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5 text-xs text-zinc-900 focus:outline-none focus:border-zinc-400">
+          <button onclick="createCollection()" class="px-3 py-1.5 bg-zinc-900 text-white text-xs font-medium rounded-lg hover:bg-zinc-800 transition">Create</button>
+        </div>
+      </div>
+
+      <!-- UPLOAD DOCUMENT -->
+      <div class="space-y-2 pt-2 border-t border-zinc-100">
+        <label class="block text-xs font-semibold text-zinc-700">Upload Document (.txt, .md, .pdf)</label>
+        <div class="flex gap-2">
+          <select id="upload-collection-select" class="flex-1 bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5 text-xs text-zinc-900 focus:outline-none">
+            <option value="">Select Collection</option>
+          </select>
+          <input type="file" id="doc-file-input" class="hidden" onchange="handleFileUpload(event)">
+          <button onclick="document.getElementById('doc-file-input').click()" class="px-3 py-1.5 bg-zinc-100 border border-zinc-200 text-zinc-800 text-xs font-medium rounded-lg hover:bg-zinc-200 transition flex items-center gap-1.5">
+            <iconify-icon icon="solar:upload-linear"></iconify-icon>
+            <span>Upload File</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- COLLECTIONS LIST -->
+      <div class="space-y-2 pt-2 border-t border-zinc-100">
+        <label class="block text-xs font-semibold text-zinc-700">Active Collections</label>
+        <div id="collections-list" class="max-h-40 overflow-y-auto space-y-1.5 text-xs">
+          <div class="text-zinc-400 text-[11px] italic">Loading collections...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- AUTH MODAL -->
-  <div id="auth-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
-      <div class="flex items-center justify-between">
-        <h3 class="text-base font-bold text-slate-900">Enterprise Authentication</h3>
-        <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      
-      <div class="flex border-b border-slate-100 text-xs font-bold">
-        <button id="auth-tab-login" onclick="setAuthMode('login')" class="flex-1 py-2 text-brand-600 border-b-2 border-brand-600">Login</button>
-        <button id="auth-tab-register" onclick="setAuthMode('register')" class="flex-1 py-2 text-slate-400">Register Tenant</button>
-      </div>
-
-      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3.5 text-xs font-medium">
-        <div id="tenant-field" class="hidden">
-          <label class="block text-slate-600 mb-1">Tenant Organization Name</label>
-          <input type="text" id="auth-tenant" autocomplete="organization" placeholder="Acme Corporation" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
-        </div>
-        <div>
-          <label class="block text-slate-600 mb-1">Work Email</label>
-          <input type="email" id="auth-email" autocomplete="email" required placeholder="admin@enterprise.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
-        </div>
-        <div>
-          <label class="block text-slate-600 mb-1">Password</label>
-          <input type="password" id="auth-password" autocomplete="current-password" required placeholder="••••••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
-        </div>
-
-        <button type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-500/20 transition mt-2">
-          Authenticate
+  <div id="auth-modal" class="hidden fixed inset-0 bg-black/30 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white border border-zinc-200 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-zinc-100 pb-3">
+        <h3 class="text-sm font-bold text-zinc-900">Workspace Authentication</h3>
+        <button onclick="closeAuthModal()" class="text-zinc-400 hover:text-zinc-700">
+          <iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon>
         </button>
+      </div>
 
-        <button type="button" onclick="fillDemoCredentials()" class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition">
-          ⚡ Auto-Create Demo Admin
+      <div class="flex border-b border-zinc-200 text-xs font-semibold">
+        <button id="auth-tab-login" onclick="setAuthMode('login')" class="flex-1 py-2 text-zinc-900 border-b-2 border-zinc-900">Sign In</button>
+        <button id="auth-tab-register" onclick="setAuthMode('register')" class="flex-1 py-2 text-zinc-400 hover:text-zinc-700">Register</button>
+      </div>
+
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3 text-xs">
+        <div id="tenant-input-container" class="hidden space-y-1">
+          <label class="block text-zinc-600 font-medium">Organization / Tenant</label>
+          <input type="text" id="auth-tenant" placeholder="Acme Corp" class="w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2 text-xs text-zinc-900 focus:outline-none">
+        </div>
+        <div class="space-y-1">
+          <label class="block text-zinc-600 font-medium">Work Email</label>
+          <input type="email" id="auth-email" required placeholder="alex@enterprise.com" class="w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2 text-xs text-zinc-900 focus:outline-none">
+        </div>
+        <div class="space-y-1">
+          <label class="block text-zinc-600 font-medium">Password</label>
+          <input type="password" id="auth-password" required placeholder="••••••••" class="w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2 text-xs text-zinc-900 focus:outline-none">
+        </div>
+        <button type="submit" class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-white font-semibold rounded-lg text-xs transition">
+          Continue
         </button>
       </form>
     </div>
   </div>
 
-  <!-- CREATE COLLECTION MODAL -->
-  <div id="collection-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-slate-900">Create Knowledge Collection</h3>
-        <button onclick="closeCreateCollectionModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="handleCreateCollection(event)" class="space-y-3.5 text-xs font-semibold">
-        <div>
-          <label class="block text-slate-600 mb-1">Collection Name</label>
-          <input type="text" id="new-collection-name" required placeholder="e.g. Engineering Handbook" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900">
-        </div>
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-sm transition">
-          Create Collection
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- FEEDBACK MODAL -->
-  <div id="feedback-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-slate-900">Response Feedback</h3>
-        <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="handleSubmitFeedback(event)" class="space-y-3.5 text-xs font-medium">
-        <input type="hidden" id="feedback-query-id">
-        <input type="hidden" id="feedback-is-helpful">
-
-        <div>
-          <label class="block text-slate-600 mb-1">Rating (1 to 5 Stars)</label>
-          <select id="feedback-rating" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold">
-            <option value="5">⭐⭐⭐⭐⭐ Excellent (5)</option>
-            <option value="4">⭐⭐⭐⭐ Good (4)</option>
-            <option value="3">⭐⭐⭐ Neutral (3)</option>
-            <option value="2">⭐⭐ Poor (2)</option>
-            <option value="1">⭐ Inaccurate / Bad (1)</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-slate-600 mb-1">Category</label>
-          <select id="feedback-category" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold">
-            <option value="general">General Feedback</option>
-            <option value="hallucination">Hallucination Detected</option>
-            <option value="missing_info">Missing Key Information</option>
-            <option value="incorrect_citation">Incorrect Citation</option>
-            <option value="unhelpful">Unhelpful Response</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-slate-600 mb-1">Comment (Optional)</label>
-          <textarea id="feedback-comment" rows="3" placeholder="Tell us what could be improved..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900"></textarea>
-        </div>
-
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-sm transition">
-          Submit Feedback
-        </button>
-      </form>
-    </div>
+  <!-- NOTIFICATION TOAST -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-zinc-900 text-white text-xs px-3.5 py-2 rounded-xl shadow-xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300">
+    <iconify-icon icon="solar:check-circle-linear" class="text-emerald-400 text-sm"></iconify-icon>
+    <span id="toast-text">Operation successful</span>
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let authToken = localStorage.getItem('ekip_token') || null;
-    let authTenant = localStorage.getItem('ekip_tenant') || null;
-    let authRole = localStorage.getItem('ekip_role') || null;
     let authMode = 'login';
-    let pollingInterval = null;
+    let currentTenant = localStorage.getItem('ekip_tenant') || 'Enterprise';
 
-    document.addEventListener('DOMContentLoaded', () => {
-      checkAuthStatus();
-      if (authToken) {
-        loadCollections();
-        loadDocumentsList();
-        loadAnalyticsOverview();
-      }
-    });
-
-    function checkAuthStatus() {
-      const userPill = document.getElementById('user-pill');
-      const loginBtn = document.getElementById('login-modal-btn');
-      if (authToken) {
-        userPill.classList.remove('hidden');
-        userPill.classList.add('flex');
-        loginBtn.classList.add('hidden');
-        document.getElementById('tenant-display').innerText = authTenant || 'Enterprise';
-        document.getElementById('role-badge').innerText = authRole || 'admin';
+    // 1. SIDEBAR TOGGLE
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      const isHidden = sidebar.classList.contains('hidden');
+      
+      if (isHidden) {
+        sidebar.classList.remove('hidden');
+        sidebar.classList.add('absolute', 'h-full', 'shadow-2xl');
+        backdrop.classList.remove('hidden');
       } else {
-        userPill.classList.add('hidden');
-        userPill.classList.remove('flex');
-        loginBtn.classList.remove('hidden');
+        sidebar.classList.add('hidden');
+        sidebar.classList.remove('absolute', 'h-full', 'shadow-2xl');
+        backdrop.classList.add('hidden');
       }
     }
 
-    function switchTab(tabId) {
-      ['chat', 'documents', 'analytics'].forEach(tab => {
-        const view = document.getElementById(`view-${tab}`);
-        const btn = document.getElementById(`tab-btn-${tab}`);
-        if (tab === tabId) {
-          view.classList.remove('hidden');
-          if (tab === 'chat') view.classList.add('flex');
-          btn.className = 'tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 bg-white text-slate-900 shadow-sm flex items-center gap-2';
-        } else {
-          view.classList.add('hidden');
-          view.classList.remove('flex');
-          btn.className = 'tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 flex items-center gap-2';
-        }
+    // 2. MODE TOGGLE (Edit vs View)
+    function handleModeToggle(checkbox) {
+      const isEdit = checkbox.checked;
+      const editables = document.querySelectorAll('[contenteditable]');
+      editables.forEach(el => {
+        el.setAttribute('contenteditable', isEdit ? 'true' : 'false');
       });
-      if (tabId === 'documents') loadDocumentsList();
-      if (tabId === 'analytics') loadAnalyticsOverview();
-    }
 
-    // AUTH FUNCTIONS
-    function openAuthModal() { document.getElementById('auth-modal').classList.remove('hidden'); }
-    function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
-    function setAuthMode(mode) {
-      authMode = mode;
-      const tenantField = document.getElementById('tenant-field');
-      const loginTab = document.getElementById('auth-tab-login');
-      const registerTab = document.getElementById('auth-tab-register');
-      if (mode === 'register') {
-        tenantField.classList.remove('hidden');
-        registerTab.className = 'flex-1 py-2 text-brand-600 border-b-2 border-brand-600';
-        loginTab.className = 'flex-1 py-2 text-slate-400';
+      const labelEdit = document.getElementById('mode-label-edit');
+      const labelView = document.getElementById('mode-label-view');
+      const toolbar = document.getElementById('format-toolbar');
+
+      if (isEdit) {
+        labelEdit.className = 'font-medium text-zinc-900';
+        labelView.className = 'font-medium text-zinc-400';
+        toolbar.style.opacity = '1';
+        toolbar.style.pointerEvents = 'auto';
       } else {
-        tenantField.classList.add('hidden');
-        loginTab.className = 'flex-1 py-2 text-brand-600 border-b-2 border-brand-600';
-        registerTab.className = 'flex-1 py-2 text-slate-400';
+        labelEdit.className = 'font-medium text-zinc-400';
+        labelView.className = 'font-medium text-zinc-900';
+        toolbar.style.opacity = '0';
+        toolbar.style.pointerEvents = 'none';
       }
     }
 
-    async function fillDemoCredentials() {
-      const suffix = Math.random().toString(36).substring(2, 7);
-      const email = `admin_${suffix}@enterprise.com`;
-      const password = 'SecurePassword123!';
-      const tenant = `Enterprise_${suffix}`;
+    // 3. CHECKLIST LOGIC
+    function toggleTaskText(checkbox) {
+      const taskText = checkbox.closest('li').querySelector('.task-text');
+      if (checkbox.checked) {
+        taskText.classList.add('line-through', 'text-zinc-400');
+      } else {
+        taskText.classList.remove('line-through', 'text-zinc-400');
+      }
+    }
+
+    // 4. COPY CODE LOGIC (Change icon to check-circle and text to green for 2s)
+    function handleCopyCode() {
+      const codeElement = document.querySelector('pre code');
+      if (!codeElement) return;
+      navigator.clipboard.writeText(codeElement.innerText).then(() => {
+        const btn = document.getElementById('copy-code-btn');
+        const icon = document.getElementById('copy-code-icon');
+        const text = document.getElementById('copy-code-text');
+
+        icon.setAttribute('icon', 'solar:check-circle-linear');
+        btn.classList.add('text-emerald-600', 'border-emerald-300');
+        text.innerText = 'Copied';
+
+        setTimeout(() => {
+          icon.setAttribute('icon', 'solar:copy-linear');
+          btn.classList.remove('text-emerald-600', 'border-emerald-300');
+          text.innerText = 'Copy';
+        }, 2000);
+      });
+    }
+
+    // 5. SHARE LOGIC (Change text to "Shared" with green glow shadow-[0_0_20px_rgba(22,163,74,0.4)] for 2s)
+    function handleShareClick() {
+      const btn = document.getElementById('share-btn');
+      const originalText = btn.innerHTML;
+      btn.innerText = 'Shared';
+      btn.classList.add('shadow-[0_0_20px_rgba(22,163,74,0.4)]', 'bg-emerald-600');
+      btn.classList.remove('bg-zinc-900');
+
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.classList.remove('shadow-[0_0_20px_rgba(22,163,74,0.4)]', 'bg-emerald-600');
+        btn.classList.add('bg-zinc-900');
+      }, 2000);
+    }
+
+    // 6. FORMATTING LOGIC
+    function formatDoc(command, value = null) {
+      document.execCommand(command, false, value);
+    }
+
+    function insertCodeSnippet() {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+      const range = selection.getRangeAt(0);
+      const codeNode = document.createElement('code');
+      codeNode.className = 'bg-zinc-100 text-zinc-900 font-mono text-xs px-1.5 py-0.5 rounded border border-zinc-200';
+      codeNode.innerText = selection.toString() || 'code';
+      range.deleteContents();
+      range.insertNode(codeNode);
+    }
+
+    // 7. TOAST NOTIFICATIONS
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const text = document.getElementById('toast-text');
+      text.innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    // 8. AI COPILOT SLIDE-OVER
+    function toggleAIPanel() {
+      const panel = document.getElementById('ai-panel');
+      const isClosed = panel.classList.contains('translate-x-full');
+      if (isClosed) {
+        panel.classList.remove('translate-x-full');
+        document.getElementById('ai-input').focus();
+      } else {
+        panel.classList.add('translate-x-full');
+      }
+    }
+
+    function handleAIKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitAIQuery();
+      }
+    }
+
+    async function submitAIQuery() {
+      const input = document.getElementById('ai-input');
+      const query = input.value.trim();
+      if (!query) return;
+
+      input.value = '';
+      const messagesContainer = document.getElementById('ai-messages');
+
+      // User Message
+      const userBubble = document.createElement('div');
+      userBubble.className = 'p-2.5 rounded-xl bg-zinc-900 text-white ml-6 text-xs';
+      userBubble.innerText = query;
+      messagesContainer.appendChild(userBubble);
+
+      // AI Response Bubble
+      const aiBubble = document.createElement('div');
+      aiBubble.className = 'p-3 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-800 mr-4 text-xs space-y-2';
+      aiBubble.innerHTML = '<div class="flex items-center gap-1.5 text-zinc-400"><iconify-icon icon="solar:refresh-linear" class="animate-spin"></iconify-icon><span>Retrieving & verifying citations...</span></div>';
+      messagesContainer.appendChild(aiBubble);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+      document.getElementById('ai-status').innerText = 'Generating...';
 
       try {
-        const res = await fetch('/api/v1/auth/register', {
+        const headers = { 'Content-Type': 'application/json' };
+        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+        const res = await fetch('/api/v1/query', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ email, password, role: 'admin', tenant_name: tenant })
+          headers: headers,
+          body: JSON.stringify({ query: query, top_k: 5 })
         });
-        const loginRes = await fetch('/api/v1/auth/login', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ email, password })
-        });
-        const loginData = await loginRes.json();
-        saveAuthSession(loginData.access_token, tenant, 'admin');
-        closeAuthModal();
-        loadCollections();
+
+        if (res.status === 401) {
+          aiBubble.innerHTML = '<div class="text-rose-600">Please sign in to access enterprise documents. <button onclick="openAuthModal()" class="underline font-bold">Sign In</button></div>';
+          document.getElementById('ai-status').innerText = 'Auth required';
+          return;
+        }
+
+        const data = await res.json();
+        const answerText = data.answer || 'No answer generated.';
+        window.lastAnswerText = answerText;
+        const groundedPct = data.metrics ? Math.round((data.metrics.groundedness || 1) * 100) : 100;
+        const latency = data.metrics ? data.metrics.latency_ms : '45';
+        const cacheHit = data.cache_hit ? '<span class="text-emerald-700 bg-emerald-100 px-1 py-0.5 rounded font-mono font-bold text-[10px]">Cache Hit</span>' : '';
+
+        aiBubble.innerHTML = `
+          <div class="leading-relaxed font-normal">${answerText}</div>
+          <div class="pt-2 border-t border-zinc-200/70 flex items-center justify-between text-[10px] text-zinc-400">
+            <div class="flex items-center gap-1.5">
+              <span class="text-emerald-600 font-semibold">Grounded: ${groundedPct}%</span>
+              <span>•</span>
+              <span>${latency}ms</span>
+              ${cacheHit}
+            </div>
+            <button onclick="insertLatestAIText()" class="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 hover:underline">
+              <iconify-icon icon="solar:add-circle-linear"></iconify-icon> Insert
+            </button>
+          </div>
+        `;
+        document.getElementById('ai-status').innerText = 'Ready';
       } catch (err) {
-        alert('Auto-register failed: ' + err.message);
+        aiBubble.innerHTML = `<div class="text-rose-600">Error: ${err.message}</div>`;
+        document.getElementById('ai-status').innerText = 'Error';
+      }
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function insertLatestAIText() {
+      if (window.lastAnswerText) {
+        insertAITextToDoc(window.lastAnswerText);
+      }
+    }
+
+    function insertAITextToDoc(text) {
+      const docViewport = document.getElementById('editor-viewport');
+      const p = document.createElement('p');
+      p.setAttribute('contenteditable', 'true');
+      p.className = 'text-zinc-800 text-sm leading-relaxed outline-none my-3 p-2 bg-indigo-50/40 border-l-2 border-indigo-500 rounded-r';
+      p.innerText = text;
+      docViewport.querySelector('.max-w-3xl').appendChild(p);
+      showToast('Inserted AI answer into editor');
+      toggleAIPanel();
+    }
+
+    // 9. KNOWLEDGE BASE & UPLOAD
+    function openKnowledgeModal() {
+      document.getElementById('knowledge-modal').classList.remove('hidden');
+      loadCollections();
+    }
+    function closeKnowledgeModal() {
+      document.getElementById('knowledge-modal').classList.add('hidden');
+    }
+
+    async function loadCollections() {
+      const listEl = document.getElementById('collections-list');
+      const selectEl = document.getElementById('upload-collection-select');
+      const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+
+      try {
+        const res = await fetch('/api/v1/collections', { headers });
+        if (res.status === 401) {
+          listEl.innerHTML = '<div class="text-zinc-400 italic">Sign in to view collections.</div>';
+          return;
+        }
+        const collections = await res.json();
+        listEl.innerHTML = '';
+        selectEl.innerHTML = '<option value="">Select Collection</option>';
+
+        if (!Array.isArray(collections) || collections.length === 0) {
+          listEl.innerHTML = '<div class="text-zinc-400 italic">No collections found. Create one above!</div>';
+          return;
+        }
+
+        document.getElementById('sidebar-doc-count').innerText = collections.length;
+
+        collections.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.innerText = c.name;
+          selectEl.appendChild(opt);
+
+          const item = document.createElement('div');
+          item.className = 'flex items-center justify-between p-2 rounded-lg bg-zinc-50 border border-zinc-200';
+          item.innerHTML = `
+            <div class="font-medium text-zinc-800 flex items-center gap-1.5">
+              <iconify-icon icon="solar:folder-linear" class="text-zinc-500"></iconify-icon>
+              <span>${c.name}</span>
+            </div>
+            <span class="text-[10px] text-zinc-400 font-mono">${c.id.substring(0, 8)}...</span>
+          `;
+          listEl.appendChild(item);
+        });
+      } catch (e) {
+        listEl.innerHTML = `<div class="text-rose-500 text-xs">Failed to load: ${e.message}</div>`;
+      }
+    }
+
+    async function createCollection() {
+      const input = document.getElementById('new-collection-name');
+      const name = input.value.trim();
+      if (!name) return;
+      const headers = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      try {
+        const res = await fetch('/api/v1/collections', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ name, description: 'Notebook collection' })
+        });
+        if (res.ok) {
+          input.value = '';
+          showToast(`Collection "${name}" created`);
+          loadCollections();
+        } else {
+          showToast('Failed to create collection');
+        }
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    async function handleFileUpload(event) {
+      const file = event.target.files[0];
+      const collectionId = document.getElementById('upload-collection-select').value;
+      if (!file || !collectionId) {
+        alert('Please choose both a file and a collection');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('collection_id', collectionId);
+
+      const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+
+      showToast(`Uploading ${file.name}...`);
+      try {
+        const res = await fetch('/api/v1/documents/upload', {
+          method: 'POST',
+          headers,
+          body: formData
+        });
+        if (res.ok) {
+          showToast(`Uploaded ${file.name} successfully! FastEmbed indexing started.`);
+          closeKnowledgeModal();
+        } else {
+          showToast('Upload failed');
+        }
+      } catch (err) {
+        showToast(`Upload error: ${err.message}`);
+      }
+    }
+
+    // 10. AUTHENTICATION MODAL
+    function openAuthModal() {
+      document.getElementById('auth-modal').classList.remove('hidden');
+    }
+    function closeAuthModal() {
+      document.getElementById('auth-modal').classList.add('hidden');
+    }
+    function setAuthMode(mode) {
+      authMode = mode;
+      const tenantContainer = document.getElementById('tenant-input-container');
+      const tabLogin = document.getElementById('auth-tab-login');
+      const tabRegister = document.getElementById('auth-tab-register');
+
+      if (mode === 'register') {
+        tenantContainer.classList.remove('hidden');
+        tabRegister.className = 'flex-1 py-2 text-zinc-900 border-b-2 border-zinc-900';
+        tabLogin.className = 'flex-1 py-2 text-zinc-400 hover:text-zinc-700';
+      } else {
+        tenantContainer.classList.add('hidden');
+        tabLogin.className = 'flex-1 py-2 text-zinc-900 border-b-2 border-zinc-900';
+        tabRegister.className = 'flex-1 py-2 text-zinc-400 hover:text-zinc-700';
       }
     }
 
@@ -623,542 +895,45 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       e.preventDefault();
       const email = document.getElementById('auth-email').value;
       const password = document.getElementById('auth-password').value;
-      const tenant = document.getElementById('auth-tenant').value;
+      const tenant = document.getElementById('auth-tenant').value || 'Enterprise';
 
       try {
         if (authMode === 'register') {
           await fetch('/api/v1/auth/register', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ email, password, role: 'admin', tenant_name: tenant || 'Enterprise' })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, role: 'admin', tenant_name: tenant })
           });
         }
-        const res = await fetch('/api/v1/auth/login', {
+
+        const loginRes = await fetch('/api/v1/auth/login', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
-        if (!res.ok) throw new Error('Invalid credentials');
-        const data = await res.json();
-        saveAuthSession(data.access_token, tenant || 'Enterprise', 'admin');
+
+        if (!loginRes.ok) throw new Error('Invalid email or password');
+        const data = await loginRes.json();
+
+        authToken = data.access_token;
+        localStorage.setItem('ekip_token', authToken);
+        localStorage.setItem('ekip_tenant', tenant);
+
+        document.getElementById('sidebar-user-name').innerText = email.split('@')[0];
+        document.getElementById('sidebar-tenant-name').innerText = tenant;
+
+        showToast('Signed in successfully');
         closeAuthModal();
         loadCollections();
       } catch (err) {
-        alert('Authentication failed: ' + err.message);
-      }
-    }
-
-    function saveAuthSession(token, tenant, role) {
-      authToken = token;
-      authTenant = tenant;
-      authRole = role;
-      localStorage.setItem('ekip_token', token);
-      localStorage.setItem('ekip_tenant', tenant);
-      localStorage.setItem('ekip_role', role);
-      checkAuthStatus();
-    }
-
-    function handleUnauthorized(message) {
-      localStorage.removeItem('ekip_token');
-      localStorage.removeItem('ekip_tenant');
-      localStorage.removeItem('ekip_role');
-      authToken = null;
-      authTenant = null;
-      authRole = null;
-      checkAuthStatus();
-      openAuthModal();
-      if (message) {
-        console.warn(message);
-      }
-    }
-
-    function logout() {
-      localStorage.clear();
-      authToken = null;
-      checkAuthStatus();
-      location.reload();
-    }
-
-    // COLLECTIONS
-    async function loadCollections() {
-      if (!authToken) return;
-      try {
-        const res = await fetch('/api/v1/collections', {
-          headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-        if (res.status === 401) {
-          handleUnauthorized('Session expired. Please sign in again.');
-          return;
-        }
-        if (!res.ok) return;
-        const collections = await res.json();
-        if (!Array.isArray(collections)) return;
-        const selects = [document.getElementById('chat-collection-select'), document.getElementById('upload-collection-select')];
-        selects.forEach(select => {
-          if (!select) return;
-          select.innerHTML = collections.length === 0 
-            ? '<option value="">No collections found - please create one</option>' 
-            : collections.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-        });
-      } catch (e) {
-        console.error('Failed to load collections', e);
-      }
-    }
-
-    function openCreateCollectionModal() { document.getElementById('collection-modal').classList.remove('hidden'); }
-    function closeCreateCollectionModal() { document.getElementById('collection-modal').classList.add('hidden'); }
-
-    async function handleCreateCollection(e) {
-      e.preventDefault();
-      const name = document.getElementById('new-collection-name').value.trim();
-      if (!name) return;
-      if (!authToken) {
-        openAuthModal();
-        return;
-      }
-      try {
-        const res = await fetch('/api/v1/collections', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-          body: JSON.stringify({ name })
-        });
-        if (res.status === 401) {
-          handleUnauthorized('Session expired. Please sign in again.');
-          return;
-        }
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.detail || 'Failed to create collection');
-        }
-        closeCreateCollectionModal();
-        document.getElementById('new-collection-name').value = '';
-        await loadCollections();
-      } catch (err) {
         alert(err.message);
       }
     }
 
-    // CHAT & STREAMING
-    async function handleSendQuery(e) {
-      e.preventDefault();
-      const input = document.getElementById('chat-input');
-      const query = input.value.trim();
-      if (!query || !authToken) {
-        if (!authToken) openAuthModal();
-        return;
-      }
-
-      const collectionId = document.getElementById('chat-collection-select').value;
-      if (!collectionId) {
-        alert('Please create and select a knowledge collection first');
-        return;
-      }
-
-      const strategy = document.getElementById('chat-strategy-select').value;
-      const isStreaming = document.getElementById('chat-stream-toggle').checked;
-      const rerank = document.getElementById('chat-rerank-toggle').checked;
-      const compress = document.getElementById('chat-compress-toggle').checked;
-
-      appendUserMessage(query);
-      input.value = '';
-
-      const assistantMessageId = 'msg-' + Math.random().toString(36).substring(2, 9);
-      appendAssistantSkeleton(assistantMessageId);
-
-      try {
-        if (isStreaming) {
-          const response = await fetch('/api/v1/query/stream', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ query, collection_ids: [collectionId], query_transformation: strategy, rerank, compress_context: compress })
-          });
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let currentEvent = null;
-          let answerText = '';
-          let sources = [];
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\\n');
-
-            for (const line of lines) {
-              if (line.startsWith('event: ')) {
-                currentEvent = line.replace('event: ', '').trim();
-              } else if (line.startsWith('data: ')) {
-                const dataStr = line.replace('data: ', '').trim();
-                if (currentEvent === 'sources') {
-                  try { sources = JSON.parse(dataStr); } catch (_) {}
-                } else if (currentEvent === 'token') {
-                  let tokenText = dataStr;
-                  try {
-                    const parsed = JSON.parse(dataStr);
-                    if (parsed && parsed.text !== undefined) {
-                      tokenText = parsed.text;
-                    }
-                  } catch (_) {}
-                  answerText += tokenText;
-                  updateAssistantText(assistantMessageId, answerText);
-                } else if (currentEvent === 'abstention') {
-                  try {
-                    const absData = JSON.parse(dataStr);
-                    answerText = absData.message || 'I do not have enough information in the provided documents to answer this question.';
-                  } catch (_) {
-                    answerText = 'I do not have enough information in the provided documents to answer this question.';
-                  }
-                  finalizeAssistantMessage(assistantMessageId, answerText, [], { abstained: true, groundedness_score: 1.0 });
-                } else if (currentEvent === 'done') {
-                  try {
-                    const doneMeta = JSON.parse(dataStr);
-                    finalizeAssistantMessage(assistantMessageId, answerText, sources, doneMeta);
-                  } catch (_) {}
-                }
-              }
-            }
-          }
-        } else {
-          const response = await fetch('/api/v1/query', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ query, collection_ids: [collectionId], query_transformation: strategy, rerank, compress_context: compress })
-          });
-          const data = await response.json();
-          finalizeAssistantMessage(assistantMessageId, data.answer, data.citations, data);
-        }
-      } catch (err) {
-        updateAssistantText(assistantMessageId, 'Error executing RAG pipeline: ' + err.message);
-      }
-    }
-
-    function appendUserMessage(text) {
-      const container = document.getElementById('chat-messages');
-      const div = document.createElement('div');
-      div.className = 'flex gap-3 text-sm max-w-3xl ml-auto justify-end';
-      div.innerHTML = `
-        <div class="bg-brand-600 rounded-2xl px-5 py-3 text-white max-w-xl shadow-md shadow-brand-500/20">
-          <p class="leading-relaxed font-medium">${escapeHtml(text)}</p>
-        </div>
-        <div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center shrink-0 font-bold">
-          <i class="fa-solid fa-user text-xs"></i>
-        </div>
-      `;
-      container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    function appendAssistantSkeleton(id) {
-      const container = document.getElementById('chat-messages');
-      const div = document.createElement('div');
-      div.id = id;
-      div.className = 'flex gap-4 text-sm max-w-3xl';
-      div.innerHTML = `
-        <div class="w-9 h-9 rounded-xl bg-white border border-slate-200 text-brand-600 shadow-sm flex items-center justify-center shrink-0">
-          <i class="fa-solid fa-robot"></i>
-        </div>
-        <div class="bg-white border border-slate-200/90 rounded-2xl p-5 text-slate-700 space-y-3 flex-1 shadow-sm">
-          <div class="assistant-content leading-relaxed text-xs font-medium text-slate-500 streaming-pulse">
-            <i class="fa-solid fa-circle-notch fa-spin mr-1.5 text-brand-600"></i> Thinking & retrieving knowledge sources...
-          </div>
-          <div class="assistant-meta hidden"></div>
-        </div>
-      `;
-      container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
-      return div;
-    }
-
-    function updateAssistantText(id, text) {
-      const box = document.getElementById(id);
-      if (!box) return;
-      const content = box.querySelector('.assistant-content');
-      content.classList.remove('streaming-pulse');
-      content.className = 'assistant-content leading-relaxed text-xs md:text-sm font-normal text-slate-800 space-y-2';
-      content.innerHTML = escapeHtml(text).replace(/\\[(\\d+)\\]/g, '<span class="inline-block px-1.5 py-0.2 mx-0.5 rounded-md bg-brand-50 text-brand-700 font-mono text-[11px] font-bold border border-brand-200">[$1]</span>');
-      document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
-    }
-
-    function finalizeAssistantMessage(id, answer, citations, meta) {
-      updateAssistantText(id, answer);
-      const box = document.getElementById(id);
-      if (!box) return;
-
-      const metaDiv = box.querySelector('.assistant-meta');
-      metaDiv.classList.remove('hidden');
-
-      const queryId = meta.query_id || '';
-      const groundedness = meta.groundedness_score !== undefined ? (meta.groundedness_score * 100).toFixed(0) : '100';
-      const isHallucination = meta.hallucination_warning || false;
-      const isCached = meta.cached || false;
-
-      let citationsHtml = '';
-      if (citations && citations.length > 0) {
-        citationsHtml = `
-          <div class="border-t border-slate-100 pt-3 mt-3">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Verified Sources (${citations.length})</span>
-            <div class="space-y-2 mt-2">
-              ${citations.map(c => `
-                <div class="text-[11px] bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700">
-                  <div class="flex items-center justify-between text-brand-700 font-bold mb-1">
-                    <span>[${c.source_id}] ${escapeHtml(c.section_path || 'Document')}</span>
-                    <span class="text-[10px] text-slate-400 font-mono">Score: ${c.relevance_score ? c.relevance_score.toFixed(2) : '1.0'}</span>
-                  </div>
-                  <p class="text-slate-600 italic font-normal">"${escapeHtml(c.snippet || '')}"</p>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      }
-
-      metaDiv.innerHTML = `
-        <div class="flex items-center justify-between border-t border-slate-100 pt-3 text-[11px] font-semibold text-slate-500">
-          <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold">Grounded: ${groundedness}%</span>
-            ${isHallucination ? '<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-bold">Hallucination Warning</span>' : ''}
-            ${isCached ? '<span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">Cache Hit</span>' : ''}
-            <span>Latency: ${meta.latency_ms || 0}ms</span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <span class="text-slate-400">Helpful?</span>
-            <button onclick="openFeedbackModal('${queryId}', true)" class="hover:text-emerald-600 px-1 py-0.5 transition" title="Thumbs Up"><i class="fa-regular fa-thumbs-up"></i></button>
-            <button onclick="openFeedbackModal('${queryId}', false)" class="hover:text-rose-600 px-1 py-0.5 transition" title="Thumbs Down"><i class="fa-regular fa-thumbs-down"></i></button>
-          </div>
-        </div>
-        ${citationsHtml}
-      `;
-    }
-
-    // FEEDBACK HANDLING
-    function openFeedbackModal(queryId, isHelpful) {
-      document.getElementById('feedback-query-id').value = queryId;
-      document.getElementById('feedback-is-helpful').value = isHelpful;
-      document.getElementById('feedback-modal').classList.remove('hidden');
-    }
-    function closeFeedbackModal() { document.getElementById('feedback-modal').classList.add('hidden'); }
-
-    async function handleSubmitFeedback(e) {
-      e.preventDefault();
-      const queryId = document.getElementById('feedback-query-id').value;
-      const isHelpful = document.getElementById('feedback-is-helpful').value === 'true';
-      const rating = parseInt(document.getElementById('feedback-rating').value);
-      const category = document.getElementById('feedback-category').value;
-      const comment = document.getElementById('feedback-comment').value;
-
-      try {
-        const res = await fetch('/api/v1/feedback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-          body: JSON.stringify({
-            query_id: queryId,
-            is_helpful: isHelpful,
-            rating: rating,
-            feedback_type: category,
-            comment: comment || null
-          })
-        });
-        if (!res.ok) throw new Error('Feedback submission failed');
-        closeFeedbackModal();
-        alert('Thank you! Your feedback has been recorded in the platform telemetry.');
-        loadAnalyticsOverview();
-      } catch (err) {
-        alert(err.message);
-      }
-    }
-
-    // DOCUMENT UPLOAD & BACKGROUND QUEUE
-    document.getElementById('file-input').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        document.getElementById('file-chosen-text').innerText = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-      }
+    // Auto-load collections on start
+    window.addEventListener('DOMContentLoaded', () => {
+      loadCollections();
     });
-
-    async function handleUploadDocument(e) {
-      e.preventDefault();
-      const fileInput = document.getElementById('file-input');
-      const file = fileInput.files[0];
-      if (!file || !authToken) return;
-
-      const collectionId = document.getElementById('upload-collection-select').value;
-      const isAsync = document.getElementById('upload-async-toggle').checked;
-
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('collection_id', collectionId);
-      formData.append('async_mode', isAsync.toString());
-
-      const btn = document.getElementById('upload-submit-btn');
-      btn.innerText = 'Uploading...';
-      btn.disabled = true;
-
-      try {
-        const res = await fetch('/api/v1/documents/upload', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${authToken}` },
-          body: formData
-        });
-        if (res.status === 401) {
-          handleUnauthorized('Session expired. Please sign in again.');
-          return;
-        }
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.detail || 'Upload failed');
-        }
-        const doc = await res.json();
-        const jobId = res.headers.get('X-Job-ID');
-
-        if (isAsync && jobId) {
-          startJobPolling(jobId, file.name);
-        } else {
-          alert(`Document successfully indexed (${doc.status})!`);
-          loadDocumentsList();
-        }
-      } catch (err) {
-        alert('Upload failed: ' + err.message);
-      } finally {
-        btn.innerText = 'Ingest Document';
-        btn.disabled = false;
-        fileInput.value = '';
-        document.getElementById('file-chosen-text').innerText = 'Click to browse or drag and drop files here';
-      }
-    }
-
-    function startJobPolling(jobId, filename) {
-      const activeBox = document.getElementById('active-job-box');
-      const emptyBox = document.getElementById('no-active-job');
-      activeBox.classList.remove('hidden');
-      emptyBox.classList.add('hidden');
-
-      document.getElementById('job-doc-name').innerText = filename;
-
-      if (pollingInterval) clearInterval(pollingInterval);
-
-      pollingInterval = setInterval(async () => {
-        try {
-          const res = await fetch(`/api/v1/documents/jobs/${jobId}`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-          });
-          if (!res.ok) return;
-          const job = await res.json();
-
-          document.getElementById('job-status-pill').innerText = job.status;
-          document.getElementById('job-stage-text').innerText = `Stage: ${job.stage}`;
-          document.getElementById('job-progress-text').innerText = `${job.progress}%`;
-          document.getElementById('job-progress-bar').style.width = `${job.progress}%`;
-
-          if (job.status === 'completed' || job.status === 'failed') {
-            clearInterval(pollingInterval);
-            pollingInterval = null;
-            if (job.status === 'completed') {
-              document.getElementById('job-status-pill').className = 'px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
-            } else {
-              document.getElementById('job-status-pill').className = 'px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200';
-            }
-            loadDocumentsList();
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }, 1500);
-    }
-
-    async function loadDocumentsList() {
-      if (!authToken) return;
-      try {
-        const res = await fetch('/api/v1/documents', {
-          headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-        if (res.status === 401) {
-          handleUnauthorized('Session expired. Please sign in again.');
-          return;
-        }
-        if (!res.ok) return;
-        const docs = await res.json();
-        if (!Array.isArray(docs)) return;
-        const tbody = document.getElementById('documents-table-body');
-        if (!tbody) return;
-        if (docs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-slate-400 font-medium">No documents ingested yet.</td></tr>';
-          return;
-        }
-        tbody.innerHTML = docs.map(d => `
-          <tr class="hover:bg-slate-50/80 transition">
-            <td class="px-6 py-3.5 font-bold text-slate-900 flex items-center gap-2.5">
-              <i class="fa-solid fa-file-lines text-brand-600"></i> ${escapeHtml(d.title)}
-            </td>
-            <td class="px-6 py-3.5 text-slate-500 font-mono">${escapeHtml(d.mime_type)}</td>
-            <td class="px-6 py-3.5 font-mono text-slate-400">${(d.content_hash || '').substring(0, 10)}...</td>
-            <td class="px-6 py-3.5">
-              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${d.status === 'indexed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">${d.status}</span>
-            </td>
-            <td class="px-6 py-3.5 text-slate-500 font-medium">${new Date(d.created_at).toLocaleDateString()}</td>
-          </tr>
-        `).join('');
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    // ANALYTICS OVERVIEW
-    async function loadAnalyticsOverview() {
-      if (!authToken) return;
-      try {
-        const res = await fetch('/api/v1/analytics/overview', {
-          headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-        if (res.status === 401) {
-          handleUnauthorized('Session expired. Please sign in again.');
-          return;
-        }
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!data || data.total_queries === undefined) return;
-
-        document.getElementById('kpi-queries').innerText = data.total_queries;
-        document.getElementById('kpi-cache-rate').innerText = ((data.cache_hit_rate || 0) * 100).toFixed(1) + '%';
-        document.getElementById('kpi-latency').innerText = (data.average_latency_ms || 0).toFixed(0) + ' ms';
-        document.getElementById('kpi-cost').innerText = '$' + (data.total_cost_usd || 0).toFixed(4);
-        document.getElementById('kpi-hallucination').innerText = ((data.hallucination_rate || 0) * 100).toFixed(1) + '%';
-        document.getElementById('kpi-satisfaction').innerText = ((data.positive_feedback_rate || 0) * 100).toFixed(0) + '%';
-
-        document.getElementById('score-groundedness').innerText = (data.average_groundedness || 1).toFixed(2);
-        document.getElementById('bar-groundedness').style.width = ((data.average_groundedness || 1) * 100) + '%';
-
-        document.getElementById('score-context').innerText = (data.average_context_relevance || 1).toFixed(2);
-        document.getElementById('bar-context').style.width = ((data.average_context_relevance || 1) * 100) + '%';
-
-        document.getElementById('score-answer').innerText = (data.average_answer_relevance || 1).toFixed(2);
-        document.getElementById('bar-answer').style.width = ((data.average_answer_relevance || 1) * 100) + '%';
-
-        const modelsTable = document.getElementById('models-table-body');
-        const breakdown = data.model_breakdown || {};
-        const models = Object.keys(breakdown);
-        if (models.length === 0) {
-          modelsTable.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-slate-400">No query data recorded yet.</td></tr>';
-        } else {
-          modelsTable.innerHTML = models.map(m => `
-            <tr>
-              <td class="px-6 py-3.5 font-bold text-slate-900">${escapeHtml(m)}</td>
-              <td class="px-6 py-3.5 font-mono text-slate-700">${breakdown[m]}</td>
-              <td class="px-6 py-3.5 font-mono text-emerald-600 font-bold">$${((data.cost_by_model && data.cost_by_model[m]) || 0).toFixed(5)}</td>
-              <td class="px-6 py-3.5 text-brand-600 font-bold">${m.includes('cache') ? 'Sub-1ms O(1)' : 'Full Pipeline'}</td>
-            </tr>
-          `).join('');
-        }
-      } catch (e) {
-        console.error('Analytics load error', e);
-      }
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
   </script>
 </body>
 </html>
