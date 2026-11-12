@@ -94,104 +94,117 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <!-- ========================================== -->
     <!-- TAB 1: RAG CHAT ASSISTANT -->
     <!-- ========================================== -->
-    <section id="view-chat" class="flex-1 flex overflow-hidden relative">
+    <section id="view-chat" class="flex-1 flex flex-col overflow-hidden relative bg-slate-50/70">
 
-      <!-- MOBILE CHAT SUBHEADER -->
-      <div class="md:hidden absolute top-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-b border-slate-200 px-3.5 py-2 flex items-center justify-between shadow-xs">
-        <div class="flex items-center gap-1.5 truncate">
-          <i class="fa-solid fa-folder text-brand-600 text-xs shrink-0"></i>
-          <span class="text-[11px] font-bold text-slate-700 truncate" id="mobile-collection-badge">Select collection</span>
-        </div>
-        <button onclick="toggleMobileSidebar()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center gap-1.5 border border-slate-200 transition">
-          <i class="fa-solid fa-sliders text-brand-600 text-[10px]"></i>
-          <span>Settings</span>
-        </button>
-      </div>
+      <!-- CHATGPT-STYLE TOP DROPDOWN SUBHEADER -->
+      <div class="bg-white border-b border-slate-200/90 px-4 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        <div class="relative">
+          <!-- CHATGPT-STYLE PILL BUTTON -->
+          <button id="chatgpt-dropdown-btn" type="button" onclick="toggleChatGPTDropdown()" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-800 transition active:scale-95 shadow-xs">
+            <span class="w-2 h-2 rounded-full bg-brand-600"></span>
+            <span id="chatgpt-pill-title" class="truncate max-w-[150px] sm:max-w-xs">Loading Collections...</span>
+            <i id="chatgpt-dropdown-chevron" class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"></i>
+          </button>
 
-      <!-- MOBILE SIDEBAR BACKDROP OVERLAY -->
-      <div id="mobile-sidebar-backdrop" onclick="toggleMobileSidebar()" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden transition-opacity"></div>
+          <!-- BACKDROP TO CLOSE ON OUTSIDE CLICK -->
+          <div id="chatgpt-dropdown-backdrop" onclick="toggleChatGPTDropdown(false)" class="hidden fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-xs"></div>
 
-      <!-- SIDEBAR CONTROLS (DRAWER ON MOBILE, STATIC ON DESKTOP) -->
-      <aside id="chat-sidebar" class="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-white p-5 flex flex-col justify-between overflow-y-auto custom-scrollbar transform -translate-x-full transition-transform duration-300 md:static md:translate-x-0 md:w-80 md:border-r md:border-slate-200 md:z-auto shadow-2xl md:shadow-none">
-        <div class="space-y-6">
-          <!-- MOBILE CLOSE DRAWER HEADER -->
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100 md:hidden">
-            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <i class="fa-solid fa-sliders text-brand-600"></i> Search Pipeline Settings
-            </span>
-            <button onclick="toggleMobileSidebar()" class="text-slate-400 hover:text-slate-600 p-1">
-              <i class="fa-solid fa-xmark text-sm"></i>
+          <!-- THE CHATGPT-STYLE DROPDOWN CARD (ALL CONTROLS FROM PICTURE) -->
+          <div id="chatgpt-dropdown-menu" class="hidden absolute left-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm sm:max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 p-4 sm:p-5 space-y-4 max-h-[82vh] overflow-y-auto custom-scrollbar">
+            
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-sliders text-brand-600"></i> Pipeline Configuration
+              </span>
+              <button type="button" onclick="toggleChatGPTDropdown(false)" class="text-slate-400 hover:text-slate-600 p-1 text-xs">
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <!-- 1. KNOWLEDGE COLLECTION -->
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Knowledge Collection</label>
+              <div class="relative">
+                <select id="chat-collection-select" onchange="handleCollectionSelectChange()" class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                  <option value="">Loading collections...</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                  <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-1 font-medium">Scans isolated tenant partition only.</p>
+            </div>
+
+            <!-- 2. QUERY TRANSFORMATION -->
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Query Transformation</label>
+              <div class="relative">
+                <select id="chat-strategy-select" class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                  <option value="none">Standard Hybrid RRF</option>
+                  <option value="hyde">HyDE (Hypothetical Doc Embedding)</option>
+                  <option value="expansion">Multi-Query Expansion</option>
+                  <option value="rewrite">Query Rewriter</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                  <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-1 font-medium">Reformulates queries before vector retrieval.</p>
+            </div>
+
+            <!-- 3. PIPELINE SAFEGUARDS -->
+            <div class="border-t border-slate-100 pt-3.5 space-y-2.5">
+              <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Pipeline Safeguards</span>
+              
+              <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
+                <span class="text-xs font-semibold text-slate-700">Real-Time Streaming (SSE)</span>
+                <input type="checkbox" id="chat-stream-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+              </label>
+
+              <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
+                <span class="text-xs font-semibold text-slate-700">Cross-Encoder Reranker</span>
+                <input type="checkbox" id="chat-rerank-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+              </label>
+
+              <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
+                <span class="text-xs font-semibold text-slate-700">Context Compression</span>
+                <input type="checkbox" id="chat-compress-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+              </label>
+            </div>
+
+            <!-- 4. PIPELINE METRICS & SPECS (SHOWN IN USER PICTURE) -->
+            <div class="border-t border-slate-100 pt-3 text-[11px] space-y-1.5 bg-slate-50/80 -mx-4 sm:-mx-5 p-3.5 rounded-xl border border-slate-200">
+              <div class="flex items-center justify-between text-slate-500">
+                <span>Embeddings:</span>
+                <span class="font-mono font-semibold text-slate-800">1024-d BAAI (CPU)</span>
+              </div>
+              <div class="flex items-center justify-between text-slate-500">
+                <span>Semantic Cache:</span>
+                <span class="font-mono font-semibold text-emerald-600">Redis L1/L2 Active</span>
+              </div>
+              <div class="flex items-center justify-between text-slate-500">
+                <span>Query Cost:</span>
+                <span class="font-mono font-bold text-emerald-600">$0.00 / query</span>
+              </div>
+            </div>
+
+            <button type="button" onclick="toggleChatGPTDropdown(false)" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs transition shadow-sm mt-2">
+              Apply & Close
             </button>
           </div>
-        <div class="space-y-6">
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Knowledge Collection</label>
-            <div class="relative">
-              <select id="chat-collection-select" class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
-                <option value="">Loading collections...</option>
-              </select>
-              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                <i class="fa-solid fa-chevron-down text-[10px]"></i>
-              </div>
-            </div>
-            <p class="text-[11px] text-slate-500 mt-1.5 font-medium">Scans isolated tenant partition only.</p>
-          </div>
-
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Query Transformation</label>
-            <div class="relative">
-              <select id="chat-strategy-select" class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
-                <option value="none">Standard Hybrid RRF</option>
-                <option value="hyde">HyDE (Hypothetical Doc Embedding)</option>
-                <option value="expansion">Multi-Query Expansion</option>
-                <option value="rewrite">Query Rewriter</option>
-              </select>
-              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                <i class="fa-solid fa-chevron-down text-[10px]"></i>
-              </div>
-            </div>
-            <p class="text-[11px] text-slate-500 mt-1.5 font-medium">Reformulates queries before vector retrieval.</p>
-          </div>
-
-          <div class="border-t border-slate-100 pt-5 space-y-3.5">
-            <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Pipeline Safeguards</span>
-            
-            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
-              <span class="text-xs font-semibold text-slate-700">Real-Time Streaming (SSE)</span>
-              <input type="checkbox" id="chat-stream-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
-            </label>
-
-            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
-              <span class="text-xs font-semibold text-slate-700">Cross-Encoder Reranker</span>
-              <input type="checkbox" id="chat-rerank-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
-            </label>
-
-            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
-              <span class="text-xs font-semibold text-slate-700">Context Compression</span>
-              <input type="checkbox" id="chat-compress-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
-            </label>
-          </div>
         </div>
 
-        <div class="border-t border-slate-100 pt-5 text-[11px] space-y-2">
-          <div class="flex items-center justify-between text-slate-500">
-            <span>Embeddings:</span>
-            <span class="font-mono font-semibold text-slate-800">1024-d BAAI (CPU)</span>
-          </div>
-          <div class="flex items-center justify-between text-slate-500">
-            <span>Semantic Cache:</span>
-            <span class="font-mono font-semibold text-emerald-600">Redis L1/L2 Active</span>
-          </div>
-          <div class="flex items-center justify-between text-slate-500">
-            <span>Query Cost:</span>
-            <span class="font-mono font-bold text-emerald-600">$0.00 / query</span>
-          </div>
+        <!-- RIGHT ACTION BUTTON IN CHAT HEADER -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          <button type="button" onclick="clearChatMessages()" class="px-2.5 py-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition text-xs flex items-center gap-1" title="Clear Chat History">
+            <i class="fa-solid fa-trash-can text-[11px]"></i>
+            <span class="hidden sm:inline">Clear Chat</span>
+          </button>
         </div>
-      </aside>
+      </div>
 
       <!-- CHAT THREAD CANVAS -->
-      <div class="flex-1 flex flex-col bg-slate-50/70 pt-10 md:pt-0">
-        <!-- MESSAGES FEED -->
+      <div class="flex-1 flex flex-col overflow-hidden">
         <div id="chat-messages" class="flex-1 overflow-y-auto p-3.5 sm:p-6 md:p-8 space-y-4 sm:space-y-6 custom-scrollbar">
           <!-- WELCOME MESSAGE BUBBLE -->
           <div class="flex gap-2.5 sm:gap-4 text-sm max-w-3xl">
@@ -629,6 +642,55 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
     }
 
+    // CHATGPT-STYLE DROPDOWN CONTROLS
+    function toggleChatGPTDropdown(forceState = null) {
+      const menu = document.getElementById('chatgpt-dropdown-menu');
+      const backdrop = document.getElementById('chatgpt-dropdown-backdrop');
+      const chevron = document.getElementById('chatgpt-dropdown-chevron');
+      if (!menu) return;
+
+      const isHidden = menu.classList.contains('hidden');
+      const shouldOpen = forceState !== null ? forceState : isHidden;
+
+      if (shouldOpen) {
+        menu.classList.remove('hidden');
+        if (backdrop) backdrop.classList.remove('hidden');
+        if (chevron) chevron.classList.add('rotate-180');
+      } else {
+        menu.classList.add('hidden');
+        if (backdrop) backdrop.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+      }
+    }
+
+    function handleCollectionSelectChange() {
+      const select = document.getElementById('chat-collection-select');
+      const pillTitle = document.getElementById('chatgpt-pill-title');
+      if (select && pillTitle) {
+        const text = select.options[select.selectedIndex]?.text || 'Select Collection';
+        pillTitle.innerText = text;
+      }
+    }
+
+    function clearChatMessages() {
+      const feed = document.getElementById('chat-messages');
+      if (feed) {
+        feed.innerHTML = `
+          <div class="flex gap-2.5 sm:gap-4 text-sm max-w-3xl">
+            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white border border-slate-200 text-brand-600 shadow-sm flex items-center justify-center shrink-0 text-xs">
+              <i class="fa-solid fa-robot"></i>
+            </div>
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 text-slate-700 space-y-2 shadow-sm max-w-[92%] sm:max-w-full">
+              <p class="font-bold text-slate-900 text-xs sm:text-sm">Welcome to the Enterprise Knowledge Assistant</p>
+              <p class="text-[11px] sm:text-xs text-slate-600 leading-relaxed font-normal">
+                I generate answers grounded strictly in your enterprise knowledge documents. Every factual claim is verified with numbered source citations <span class="font-mono font-bold text-brand-700 bg-brand-50 px-1 py-0.5 rounded border border-brand-200">[1]</span>, evaluated by RAG Triad guardrails, with zero hallucination guarantee.
+              </p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
     // AUTH FUNCTIONS
     function openAuthModal() { document.getElementById('auth-modal').classList.remove('hidden'); }
     function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
@@ -755,9 +817,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             ? '<option value="">No collections found - please create one</option>' 
             : collections.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
         });
-        updateMobileCollectionBadge();
+        handleCollectionSelectChange();
         const chatSel = document.getElementById('chat-collection-select');
-        if (chatSel) chatSel.onchange = updateMobileCollectionBadge;
+        if (chatSel) chatSel.onchange = handleCollectionSelectChange;
       } catch (e) {
         console.error('Failed to load collections', e);
       }
