@@ -43,22 +43,22 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <body class="h-full bg-slate-50 text-slate-800 font-sans flex flex-col antialiased">
 
   <!-- TOP APP BAR -->
-  <header class="bg-white border-b border-slate-200/90 sticky top-0 z-40 px-6 py-3 flex items-center justify-between shadow-sm/50">
+  <header class="bg-white border-b border-slate-200/90 sticky top-0 z-40 px-3.5 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between shadow-sm/50">
     <!-- BRAND / LOGO -->
-    <div class="flex items-center space-x-3.5">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/25 ring-2 ring-brand-100">
-        <i class="fa-solid fa-shapes text-lg"></i>
+    <div class="flex items-center space-x-2.5 sm:space-x-3.5">
+      <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/25 ring-2 ring-brand-100 shrink-0">
+        <i class="fa-solid fa-shapes text-base sm:text-lg"></i>
       </div>
       <div>
-        <div class="flex items-center gap-2.5">
-          <h1 class="text-base font-extrabold tracking-tight text-slate-900">EKIP</h1>
-          <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 font-mono">Enterprise RAG</span>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm sm:text-base font-extrabold tracking-tight text-slate-900">EKIP</h1>
+          <span class="text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 font-mono">Enterprise RAG</span>
         </div>
-        <p class="text-[11px] font-medium text-slate-400">Multi-Tenant Knowledge Intelligence Platform (Free & Local)</p>
+        <p class="hidden sm:block text-[11px] font-medium text-slate-400">Multi-Tenant Knowledge Intelligence Platform (Free & Local)</p>
       </div>
     </div>
 
-    <!-- NAVIGATION SEGMENTED CONTROLS -->
+    <!-- NAVIGATION SEGMENTED CONTROLS (DESKTOP) -->
     <nav class="hidden md:flex bg-slate-100/90 p-1 rounded-xl border border-slate-200">
       <button onclick="switchTab('chat')" id="tab-btn-chat" class="tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 bg-white text-slate-900 shadow-sm flex items-center gap-2">
         <i class="fa-solid fa-message text-brand-600"></i> RAG Chat Assistant
@@ -72,18 +72,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </nav>
 
     <!-- AUTHENTICATION STATUS -->
-    <div class="flex items-center space-x-3">
-      <div id="user-pill" class="hidden items-center gap-2.5 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="tenant-display" class="font-bold text-slate-800">Acme Corp</span>
-        <span id="role-badge" class="px-2 py-0.5 rounded-md text-[10px] bg-brand-100 text-brand-700 font-bold font-mono">admin</span>
-        <button onclick="logout()" class="text-slate-400 hover:text-rose-600 ml-1.5 transition" title="Sign Out">
+    <div class="flex items-center space-x-2 sm:space-x-3">
+      <div id="user-pill" class="hidden items-center gap-1.5 sm:gap-2.5 bg-slate-100 border border-slate-200 px-2 sm:px-3 py-1.5 rounded-xl text-xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+        <span id="tenant-display" class="font-bold text-slate-800 truncate max-w-[80px] sm:max-w-[140px]">Acme Corp</span>
+        <span id="role-badge" class="px-1.5 sm:px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] bg-brand-100 text-brand-700 font-bold font-mono">admin</span>
+        <button onclick="logout()" class="text-slate-400 hover:text-rose-600 ml-1 transition" title="Sign Out">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </button>
       </div>
 
-      <button id="login-modal-btn" onclick="openAuthModal()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm shadow-brand-500/20 transition flex items-center gap-2">
-        <i class="fa-solid fa-lock text-[10px]"></i> Sign In / Register
+      <button id="login-modal-btn" onclick="openAuthModal()" class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm shadow-brand-500/20 transition flex items-center gap-1.5 sm:gap-2">
+        <i class="fa-solid fa-lock text-[10px]"></i> <span class="hidden sm:inline">Sign In / Register</span><span class="sm:hidden">Sign In</span>
       </button>
     </div>
   </header>
@@ -94,9 +94,35 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <!-- ========================================== -->
     <!-- TAB 1: RAG CHAT ASSISTANT -->
     <!-- ========================================== -->
-    <section id="view-chat" class="flex-1 flex overflow-hidden">
-      <!-- SIDEBAR CONTROLS -->
-      <aside class="w-80 border-r border-slate-200 bg-white p-5 flex flex-col justify-between overflow-y-auto custom-scrollbar">
+    <section id="view-chat" class="flex-1 flex overflow-hidden relative">
+
+      <!-- MOBILE CHAT SUBHEADER -->
+      <div class="md:hidden absolute top-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-b border-slate-200 px-3.5 py-2 flex items-center justify-between shadow-xs">
+        <div class="flex items-center gap-1.5 truncate">
+          <i class="fa-solid fa-folder text-brand-600 text-xs shrink-0"></i>
+          <span class="text-[11px] font-bold text-slate-700 truncate" id="mobile-collection-badge">Select collection</span>
+        </div>
+        <button onclick="toggleMobileSidebar()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center gap-1.5 border border-slate-200 transition">
+          <i class="fa-solid fa-sliders text-brand-600 text-[10px]"></i>
+          <span>Settings</span>
+        </button>
+      </div>
+
+      <!-- MOBILE SIDEBAR BACKDROP OVERLAY -->
+      <div id="mobile-sidebar-backdrop" onclick="toggleMobileSidebar()" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden transition-opacity"></div>
+
+      <!-- SIDEBAR CONTROLS (DRAWER ON MOBILE, STATIC ON DESKTOP) -->
+      <aside id="chat-sidebar" class="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-white p-5 flex flex-col justify-between overflow-y-auto custom-scrollbar transform -translate-x-full transition-transform duration-300 md:static md:translate-x-0 md:w-80 md:border-r md:border-slate-200 md:z-auto shadow-2xl md:shadow-none">
+        <div class="space-y-6">
+          <!-- MOBILE CLOSE DRAWER HEADER -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 md:hidden">
+            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-sliders text-brand-600"></i> Search Pipeline Settings
+            </span>
+            <button onclick="toggleMobileSidebar()" class="text-slate-400 hover:text-slate-600 p-1">
+              <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+          </div>
         <div class="space-y-6">
           <div>
             <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Knowledge Collection</label>
@@ -164,30 +190,30 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </aside>
 
       <!-- CHAT THREAD CANVAS -->
-      <div class="flex-1 flex flex-col bg-slate-50/70">
+      <div class="flex-1 flex flex-col bg-slate-50/70 pt-10 md:pt-0">
         <!-- MESSAGES FEED -->
-        <div id="chat-messages" class="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar">
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-3.5 sm:p-6 md:p-8 space-y-4 sm:space-y-6 custom-scrollbar">
           <!-- WELCOME MESSAGE BUBBLE -->
-          <div class="flex gap-4 text-sm max-w-3xl">
-            <div class="w-9 h-9 rounded-xl bg-white border border-slate-200 text-brand-600 shadow-sm flex items-center justify-center shrink-0">
+          <div class="flex gap-2.5 sm:gap-4 text-sm max-w-3xl">
+            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white border border-slate-200 text-brand-600 shadow-sm flex items-center justify-center shrink-0 text-xs">
               <i class="fa-solid fa-robot"></i>
             </div>
-            <div class="bg-white border border-slate-200/90 rounded-2xl p-5 text-slate-700 space-y-2 shadow-sm">
-              <p class="font-bold text-slate-900 text-sm">Welcome to the Enterprise Knowledge Assistant</p>
-              <p class="text-xs text-slate-600 leading-relaxed font-normal">
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 text-slate-700 space-y-2 shadow-sm max-w-[92%] sm:max-w-full">
+              <p class="font-bold text-slate-900 text-xs sm:text-sm">Welcome to the Enterprise Knowledge Assistant</p>
+              <p class="text-[11px] sm:text-xs text-slate-600 leading-relaxed font-normal">
                 I generate answers grounded strictly in your enterprise knowledge documents. Every factual claim is verified with numbered source citations <span class="font-mono font-bold text-brand-700 bg-brand-50 px-1 py-0.5 rounded border border-brand-200">[1]</span>, evaluated by RAG Triad guardrails, with zero hallucination guarantee.
               </p>
             </div>
           </div>
         </div>
 
-        <!-- FLOATING PROMPT INPUT CAPSULE -->
-        <div class="p-4 md:p-6 bg-gradient-to-t from-white via-white/90 to-transparent">
-          <form onsubmit="handleSendQuery(event)" class="max-w-4xl mx-auto flex gap-3 bg-white border border-slate-300/80 rounded-2xl p-1.5 shadow-lg shadow-slate-200/60 focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-600 transition">
-            <input type="text" id="chat-input" placeholder="Ask a question about your uploaded documents..." 
-                   class="flex-1 bg-transparent px-4 py-2.5 text-xs md:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none">
-            <button type="submit" id="send-btn" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md shadow-brand-500/25 transition flex items-center gap-2">
-              <span>Send</span> <i class="fa-solid fa-arrow-up text-[10px]"></i>
+        <!-- FLOATING PROMPT INPUT CAPSULE (WITH MOBILE SAFE AREA PADDING) -->
+        <div class="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 bg-gradient-to-t from-white via-white/95 to-transparent">
+          <form onsubmit="handleSendQuery(event)" class="max-w-4xl mx-auto flex gap-2 sm:gap-3 bg-white border border-slate-300/80 rounded-2xl p-1.5 shadow-lg shadow-slate-200/60 focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-600 transition">
+            <input type="text" id="chat-input" placeholder="Ask a question about your documents..." 
+                   class="flex-1 bg-transparent px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none">
+            <button type="submit" id="send-btn" class="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md shadow-brand-500/25 transition flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <span class="hidden sm:inline">Send</span> <i class="fa-solid fa-arrow-up text-[10px]"></i>
             </button>
           </form>
         </div>
@@ -197,15 +223,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <!-- ========================================== -->
     <!-- TAB 2: DOCUMENTS & INGESTION QUEUE -->
     <!-- ========================================== -->
-    <section id="view-documents" class="hidden flex-1 overflow-y-auto p-8 bg-slate-50 custom-scrollbar">
-      <div class="max-w-6xl mx-auto space-y-8">
+    <section id="view-documents" class="hidden flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-20 md:pb-8 bg-slate-50 custom-scrollbar">
+      <div class="max-w-6xl mx-auto space-y-6 sm:space-y-8">
         <!-- HEADER & ACTIONS -->
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 class="text-lg font-bold text-slate-900">Knowledge Ingestion & Queue</h2>
+            <h2 class="text-base sm:text-lg font-bold text-slate-900">Knowledge Ingestion & Queue</h2>
             <p class="text-xs text-slate-500 font-medium mt-0.5">Upload enterprise documents into isolated collections with structural chunking and async background queues.</p>
           </div>
-          <button onclick="openCreateCollectionModal()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm flex items-center gap-2 transition">
+          <button onclick="openCreateCollectionModal()" class="self-start sm:self-auto px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm flex items-center gap-2 transition">
             <i class="fa-solid fa-plus text-[10px]"></i> New Collection
           </button>
         </div>
@@ -241,12 +267,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 <p class="text-[11px] text-slate-400 mt-1">Supports Markdown (.md), PDF (.pdf), Text (.txt) up to 50 MB</p>
               </div>
 
-              <div class="flex items-center justify-between pt-2">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                 <label class="flex items-center gap-2.5 text-xs text-slate-600 font-medium cursor-pointer">
-                  <input type="checkbox" id="upload-async-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300">
+                  <input type="checkbox" id="upload-async-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 shrink-0">
                   <span>Asynchronous Background Task Queue (Redis)</span>
                 </label>
-                <button type="submit" id="upload-submit-btn" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm transition">
+                <button type="submit" id="upload-submit-btn" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm transition">
                   Ingest Document
                 </button>
               </div>
@@ -318,14 +344,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <!-- ========================================== -->
     <!-- TAB 3: ANALYTICS & OBSERVABILITY -->
     <!-- ========================================== -->
-    <section id="view-analytics" class="hidden flex-1 overflow-y-auto p-8 bg-slate-50 custom-scrollbar">
-      <div class="max-w-6xl mx-auto space-y-8">
-        <div class="flex items-center justify-between">
+    <section id="view-analytics" class="hidden flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-20 md:pb-8 bg-slate-50 custom-scrollbar">
+      <div class="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 class="text-lg font-bold text-slate-900">System Telemetry & Quality Overview</h2>
+            <h2 class="text-base sm:text-lg font-bold text-slate-900">System Telemetry & Quality Overview</h2>
             <p class="text-xs text-slate-500 font-medium mt-0.5">Real-time telemetry, cache hit efficiency, LLM costs, and RAG Triad quality metrics.</p>
           </div>
-          <button onclick="loadAnalyticsOverview()" class="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 border border-slate-200 shadow-sm flex items-center gap-2 transition">
+          <button onclick="loadAnalyticsOverview()" class="self-start sm:self-auto px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 border border-slate-200 shadow-sm flex items-center gap-2 transition">
             <i class="fa-solid fa-rotate text-[10px]"></i> Refresh Telemetry
           </button>
         </div>
@@ -560,18 +586,47 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       ['chat', 'documents', 'analytics'].forEach(tab => {
         const view = document.getElementById(`view-${tab}`);
         const btn = document.getElementById(`tab-btn-${tab}`);
+        const mobileBtn = document.getElementById(`mobile-tab-btn-${tab}`);
         if (tab === tabId) {
           view.classList.remove('hidden');
           if (tab === 'chat') view.classList.add('flex');
-          btn.className = 'tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 bg-white text-slate-900 shadow-sm flex items-center gap-2';
+          if (btn) btn.className = 'tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 bg-white text-slate-900 shadow-sm flex items-center gap-2';
+          if (mobileBtn) mobileBtn.className = 'flex-1 flex flex-col items-center gap-1 text-[10px] font-bold text-brand-600 transition';
         } else {
           view.classList.add('hidden');
           view.classList.remove('flex');
-          btn.className = 'tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 flex items-center gap-2';
+          if (btn) btn.className = 'tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 flex items-center gap-2';
+          if (mobileBtn) mobileBtn.className = 'flex-1 flex flex-col items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-700 transition';
         }
       });
       if (tabId === 'documents') loadDocumentsList();
       if (tabId === 'analytics') loadAnalyticsOverview();
+    }
+
+    // MOBILE SIDEBAR TOGGLE
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('chat-sidebar');
+      const backdrop = document.getElementById('mobile-sidebar-backdrop');
+      if (!sidebar) return;
+      const isClosed = sidebar.classList.contains('-translate-x-full');
+      if (isClosed) {
+        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.add('translate-x-0');
+        if (backdrop) backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        sidebar.classList.remove('translate-x-0');
+        if (backdrop) backdrop.classList.add('hidden');
+      }
+    }
+
+    function updateMobileCollectionBadge() {
+      const select = document.getElementById('chat-collection-select');
+      const badge = document.getElementById('mobile-collection-badge');
+      if (select && badge) {
+        const text = select.options[select.selectedIndex]?.text || 'Select collection';
+        badge.innerText = text;
+      }
     }
 
     // AUTH FUNCTIONS
@@ -700,6 +755,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             ? '<option value="">No collections found - please create one</option>' 
             : collections.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
         });
+        updateMobileCollectionBadge();
+        const chatSel = document.getElementById('chat-collection-select');
+        if (chatSel) chatSel.onchange = updateMobileCollectionBadge;
       } catch (e) {
         console.error('Failed to load collections', e);
       }
@@ -836,12 +894,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     function appendUserMessage(text) {
       const container = document.getElementById('chat-messages');
       const div = document.createElement('div');
-      div.className = 'flex gap-3 text-sm max-w-3xl ml-auto justify-end';
+      div.className = 'flex gap-2 sm:gap-3 text-sm max-w-3xl ml-auto justify-end';
       div.innerHTML = `
-        <div class="bg-brand-600 rounded-2xl px-5 py-3 text-white max-w-xl shadow-md shadow-brand-500/20">
+        <div class="bg-brand-600 rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 text-white max-w-[85%] sm:max-w-xl shadow-md shadow-brand-500/20 text-xs sm:text-sm">
           <p class="leading-relaxed font-medium">${escapeHtml(text)}</p>
         </div>
-        <div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center shrink-0 font-bold">
+        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center shrink-0 font-bold text-xs">
           <i class="fa-solid fa-user text-xs"></i>
         </div>
       `;
@@ -914,15 +972,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
 
       metaDiv.innerHTML = `
-        <div class="flex items-center justify-between border-t border-slate-100 pt-3 text-[11px] font-semibold text-slate-500">
-          <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[11px] font-semibold text-slate-500">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold">Grounded: ${groundedness}%</span>
             ${isHallucination ? '<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-bold">Hallucination Warning</span>' : ''}
             ${isCached ? '<span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">Cache Hit</span>' : ''}
             <span>Latency: ${meta.latency_ms || 0}ms</span>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 ml-auto">
             <span class="text-slate-400">Helpful?</span>
             <button onclick="openFeedbackModal('${queryId}', true)" class="hover:text-emerald-600 px-1 py-0.5 transition" title="Thumbs Up"><i class="fa-regular fa-thumbs-up"></i></button>
             <button onclick="openFeedbackModal('${queryId}', false)" class="hover:text-rose-600 px-1 py-0.5 transition" title="Thumbs Down"><i class="fa-regular fa-thumbs-down"></i></button>
@@ -1160,6 +1218,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
   </script>
+  <!-- MOBILE BOTTOM NAVIGATION BAR -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 flex items-center justify-around shadow-lg">
+    <button onclick="switchTab('chat')" id="mobile-tab-btn-chat" class="flex-1 flex flex-col items-center gap-1 text-[10px] font-bold text-brand-600 transition">
+      <i class="fa-solid fa-message text-base"></i>
+      <span>Chat</span>
+    </button>
+    <button onclick="switchTab('documents')" id="mobile-tab-btn-documents" class="flex-1 flex flex-col items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-700 transition">
+      <i class="fa-solid fa-layer-group text-base"></i>
+      <span>Documents</span>
+    </button>
+    <button onclick="switchTab('analytics')" id="mobile-tab-btn-analytics" class="flex-1 flex flex-col items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-700 transition">
+      <i class="fa-solid fa-chart-simple text-base"></i>
+      <span>Telemetry</span>
+    </button>
+  </nav>
 </body>
 </html>
 """
