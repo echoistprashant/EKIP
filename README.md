@@ -1,6 +1,6 @@
 # 🏢 EKIP: Enterprise Knowledge Intelligence Platform
 > **Production-Grade, Multi-Tenant Retrieval-Augmented Generation (RAG) System**  
-> *Engineered with Zero-Hallucination Guardrails, Hybrid Search (pgvector HNSW + Full-Text Search), Two-Tier Semantic Caching, Real-Time SSE Streaming, and Asynchronous Background Processing.*
+> *Engineered with Citation-Enforced Guardrails, Hybrid Search (pgvector HNSW + Full-Text Search), Two-Tier Semantic Caching, Real-Time SSE Streaming, and Asynchronous Background Processing.*
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -18,14 +18,16 @@
 > 📚 **Interactive Swagger API Docs:** [https://ekip-rag-platform.onrender.com/docs](https://ekip-rag-platform.onrender.com/docs)  
 > 🩺 **System Health Endpoint:** [https://ekip-rag-platform.onrender.com/api/v1/health](https://ekip-rag-platform.onrender.com/api/v1/health)
 
+![EKIP dashboard](docs/dashboard.png)
+
 ---
 
 ## 🌟 Executive Summary
 
-**EKIP** is an enterprise-ready, multi-tenant RAG platform designed to eliminate hallucinations, enforce rigorous citation verification, and operate at ultra-low latency and zero cloud infrastructure cost. 
+**EKIP** is an enterprise-ready, multi-tenant RAG platform designed to enforce rigorous citation verification, prevent ungrounded claims, and operate at ultra-low latency and zero cloud infrastructure cost. 
 
 Unlike basic chatbot wrappers or demo scripts, EKIP is built according to production distributed systems and AI engineering standards:
-* **Strict Grounding Guarantee:** Every factual claim must be backed by a verified source citation `[n]`. Queries unsupported by the knowledge base trigger an **Abstention Gate** refusal instead of hallucinating.
+* **Strict Grounding:** Every factual claim must be backed by a verified source citation `[n]`. Queries not supported by the knowledge base are refused by an Abstention Gate instead of being answered.
 * **Hybrid Two-Stage Retrieval:** Combines 1024-dimensional dense vectors (pgvector HNSW index) with sparse lexical Full-Text Search fused via **Reciprocal Rank Fusion (RRF)**, followed by a **Cross-Encoder Reranker** and **Extractive Sentence Compression**.
 * **Enterprise Multi-Tenancy:** Hard tenant data perimeter enforced at the database, vector index, and cache layers.
 * **Two-Tier Semantic Caching:** L1 exact SHA-256 hash match (`<1ms`) + L2 Cosine vector similarity match (`<5ms`) to bypass redundant LLM executions.
@@ -38,35 +40,14 @@ Unlike basic chatbot wrappers or demo scripts, EKIP is built according to produc
 
 ```mermaid
 flowchart TD
-    User([User / Web Client]) -->|1. Submit Query| API[FastAPI Gateway]
-    
-    subgraph CachingLayer [Phase 11: Two-Tier Semantic Cache]
-        API -->|Check Cache| Redis[(Redis L1 Exact Hash & L2 Vector Cosine)]
-        Redis -.->|Cache Hit < 3ms| User
-    end
-    
-    subgraph QueryPipeline [Phases 6, 9 & 10: Retrieval & Reranking]
-        API -->|Cache Miss| Transform[Query Transformation: HyDE / Multi-Query Expansion]
-        Transform --> Hybrid[Hybrid Search: Dense Vector + Lexical FTS]
-        Hybrid -->|pgvector HNSW + tsvector| PG[(PostgreSQL 16 + pgvector)]
-        Hybrid --> RRF[Reciprocal Rank Fusion k=60]
-        RRF --> Reranker[Stage 2 Cross-Encoder Reranker]
-        Reranker --> Compressor[Extractive Sentence Compression]
-        Compressor --> LostMiddle[Context Builder: Lost-in-the-Middle Permutation]
-    end
-
-    subgraph LLMAndEvaluation [Phases 7, 8, 12 & 13: Generation & Guardrails]
-        LostMiddle --> Router{Resilient LLM Router}
-        Router -->|Primary| Gemini[Google Gemini API]
-        Router -.->|Circuit Breaker Fallback| MockLLM[Offline Deterministic Engine]
-        Gemini --> Verifier[Citation Verifier]
-        Verifier --> Triad[RAG Triad Evaluator: Groundedness & Relevance]
-        Triad --> Streamer[SSE Token Streamer]
-    end
-
-    Streamer -->|Real-Time Token Flow| User
-    Streamer -->|Async Persist Telemetry| PG
-    Streamer -->|Populate Cache| Redis
+    User([1. User Query]) --> Cache[2. Redis Two-Tier Cache<br/>L1 SHA-256 exact match & L2 semantic cosine]
+    Cache -->|Cache Hit| SSE[6. SSE Streamed Answer]
+    Cache -->|Cache Miss| Hybrid[3. Hybrid Retrieval<br/>pgvector HNSW dense + lexical full-text search]
+    Hybrid --> RRF[Reciprocal Rank Fusion k = 60]
+    RRF --> RerankCompress[4. Cross-Encoder Reranker &<br/>Sentence Compression]
+    RerankCompress --> LLMGuard[5. LLM Synthesis with<br/>Citation Guardrails & Abstention Gate]
+    LLMGuard --> SSE
+    SSE --> StreamOut([Token-by-Token Stream to User])
 ```
 
 ---
@@ -80,17 +61,39 @@ flowchart TD
 | **Phase 3** | Security & Multi-Tenancy | Multi-tenant RBAC (admin, editor, viewer), password hashing (`bcrypt`), JWT tokens. |
 | **Phase 4** | Ingestion & Chunking | Hierarchical markdown & PDF parsing, recursive structural chunking, SHA-256 deduplication. |
 | **Phase 5** | Vector Embeddings | Local ONNX `BAAI/bge-large-en-v1.5` embeddings (1024-d) via FastEmbed (zero GPU cost). |
-| **Phase 6** | Hybrid Retrieval | Parallel Dense Vector + Lexical FTS, fused via Reciprocal Rank Fusion ($k=60$). |
+| **Phase 6** | Hybrid Retrieval | Parallel Dense Vector + Lexical FTS, fused via Reciprocal Rank Fusion ($k = 60$). |
 | **Phase 7** | LLM Resilience | Circuit breakers, exponential jitter retries, and automated fallback routing. |
 | **Phase 8** | Context Assembly | Token budget management, structured `<context>` injection, Lost-in-the-Middle permutation. |
 | **Phase 9** | Reranking & Compression | Cross-Encoder scoring (`BAAI/bge-reranker-base`) + extractive sentence noise filtering. |
 | **Phase 10** | Query Transformation | HyDE (Hypothetical Document Embeddings), Multi-Query Expansion, and Query Rewriting. |
 | **Phase 11** | Two-Tier Semantic Cache | Redis L1 exact SHA-256 match + L2 vector cosine similarity ($O(1)$ sub-millisecond responses). |
-| **Phase 12** | Real-Time SSE Streaming | RFC 8895 Server-Sent Events with structured event types (`ping`, `sources`, `token`, `done`, `abstention`). |
+| **Phase 12** | Real-Time SSE Streaming | Server-Sent Events (WHATWG standard) with structured event types (`ping`, `sources`, `token`, `done`, `abstention`). |
 | **Phase 13** | RAG Triad Guardrails | Real-time automated evaluation: Groundedness (Faithfulness), Context Relevance, Answer Relevance. |
 | **Phase 14** | Telemetry & Observability | Model cost accounting, latency p50/p95 tracking, user feedback engine (👍/👎), audit logging. |
 | **Phase 15** | Background Task Queue | Asynchronous Redis ingestion queue (`BRPOP`), worker daemon with 4-stage live stepper. |
 | **Phase 16** | Web UI Dashboard | Modern bright enterprise dashboard, live markdown rendering, interactive telemetry meters. |
+
+---
+
+## ⚡ Performance
+
+| Metric | Benchmark Result | Methodology & Context |
+| :--- | :--- | :--- |
+| **Redis L1 Exact-Match Cache** | `< 1 ms` | Exact SHA-256 query hash match |
+| **Redis L2 Semantic Cache** | `< 5 ms` | Cosine vector similarity threshold match |
+| **Retrieval Latency (p50 / p95)** | *To be measured locally* | Evaluated on local CPU across retrieval pipeline |
+| **Cache Hit Rate** | *To be measured locally* | Measured across a test workload of 30+ queries |
+| **Estimated Token Savings** | *Estimated via cache hit ratio* | Calculated as tokens avoided on cache hits divided by total tokens |
+| **Test Workload & Hardware** | 30+ varied queries (repeated & paraphrased) | Workstation CPU & RAM |
+
+> [!NOTE]
+> **Token & Cost Savings Estimation:** Estimated token savings is calculated as the tokens avoided on cache hits divided by the total tokens that would have been required without caching.
+> 
+> **How to Measure Local CPU Latency & Cache Metrics:**
+> 1. Launch local background containers: `docker compose up -d`
+> 2. Start the local API server: `uvicorn app.main:app --host 127.0.0.1 --port 8000`
+> 3. Submit at least 30 varied queries including repeated and paraphrased queries to exercise both L1 and L2 cache mechanisms.
+> 4. Query `GET /api/v1/analytics/overview` to retrieve your hardware's exact CPU p50/p95 retrieval latency and live cache hit rate.
 
 ---
 
@@ -180,11 +183,8 @@ The platform can be explored live in cloud production or run locally:
 
 ### Try the Live Demo in 30 Seconds:
 1. Open the **[Live Dashboard](https://ekip-rag-platform.onrender.com)**.
-2. Click **"Sign In / Register"** in the navigation bar.
-3. Use the demo credentials or create your own isolated tenant:
-   * **Email:** `admin@enterprise.com`
-   * **Password:** `SecurePassword123!`
-4. Create a knowledge collection, upload any `.pdf`, `.txt`, or `.md` file, and test natural language queries with verified citations `[1]` and zero hallucinations!
+2. Click **"Sign In / Register"** and register your own isolated tenant. Each tenant's data is fully separated.
+3. Create a knowledge collection, upload any `.pdf`, `.txt`, or `.md` file, and test natural language queries with verified citations `[1]`. Questions the knowledge base can't support are refused by the abstention gate.
 
 ### Dashboard Capabilities:
 1. **RAG Chat Assistant:** Real-time token streaming, query transformation toggle (HyDE, Expansion), and verified citation cards.
