@@ -47,9 +47,12 @@ class Settings(BaseSettings):
     SEMANTIC_CACHE_THRESHOLD: float = 0.92
     SEMANTIC_CACHE_TTL_SECONDS: int = 86400
 
-    # Background Ingestion Queue
+    # Background Ingestion Queue & Resilience
     UPLOAD_DIR: str = "data/uploads"
     INGESTION_QUEUE_NAME: str = "ekip:ingestion_jobs"
+    INGESTION_DLQ_NAME: str = "ekip:ingestion_dlq"
+    INGESTION_MAX_RETRIES: int = 3
+    INGESTION_RETRY_BACKOFF_BASE: float = 1.0  # seconds base for exponential backoff
 
     # Rate Limiting
     RATE_LIMIT_QUERY_PER_MINUTE: int = 20

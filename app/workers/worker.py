@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cache import get_semantic_cache
+from app.core.config import settings
 from app.models.chunk import Chunk
 from app.models.document import Document
 from app.models.job import IngestionJob
@@ -23,8 +24,15 @@ logger = logging.getLogger("ekip.ingestion_worker")
 
 
 class IngestionWorker:
-    def __init__(self, queue: BaseIngestionQueue | None = None) -> None:
+    def __init__(
+        self,
+        queue: BaseIngestionQueue | None = None,
+        max_retries: int | None = None,
+        backoff_base: float | None = None,
+    ) -> None:
         self.queue = queue or get_ingestion_queue()
+        self.max_retries = max_retries if max_retries is not None else settings.INGESTION_MAX_RETRIES
+        self.backoff_base = backoff_base if backoff_base is not None else settings.INGESTION_RETRY_BACKOFF_BASE
 
     async def process_job(
         self,
@@ -141,25 +149,56 @@ class IngestionWorker:
         except Exception as e:
             await db.rollback()
             now = datetime.now(timezone.utc)
-            doc.status = "failed"
-            doc.error_code = str(e)[:100]
+            retry_count = job_data.get("retry_count", 0)
 
-            job.status = "failed"
-            job.stage = "failed"
-            job.error_message = str(e)
-            job.completed_at = now
-            await db.commit()
+            if retry_count < self.max_retries:
+                next_attempt = retry_count + 1
+                job_data["retry_count"] = next_attempt
+                delay = self.backoff_base * (2 ** retry_count)
 
-            logger.error(f"Ingestion job {job_id} failed: {e}", exc_info=True)
-            raise
+                logger.warning(
+                    f"Ingestion job {job_id} failed on attempt {next_attempt}/{self.max_retries}. "
+                    f"Backing off for {delay:.2f}s before retry: {e}"
+                )
+
+                job.status = "retrying"
+                job.stage = "retry_backoff"
+                job.error_message = f"Attempt {next_attempt}/{self.max_retries} failed: {e}"
+                doc.status = "retrying"
+                doc.error_code = f"RETRY_{next_attempt}"
+                await db.commit()
+
+                if delay > 0:
+                    await asyncio.sleep(delay)
+                await self.queue.enqueue(job_data)
+                raise
+            else:
+                logger.error(
+                    f"Ingestion job {job_id} exceeded max retries ({self.max_retries}). "
+                    f"Routing to Dead-Letter Queue (DLQ). Error: {e}"
+                )
+                await self.queue.enqueue_dlq(job_data, error=str(e))
+
+                doc.status = "failed"
+                doc.error_code = "MAX_RETRIES_EXCEEDED"
+
+                job.status = "failed"
+                job.stage = "dead_letter_queue"
+                job.error_message = f"Exceeded maximum retries ({self.max_retries}). Sent to DLQ. Error: {e}"
+                job.completed_at = now
+                await db.commit()
+                raise
 
     async def process_next_job(self, db: AsyncSession, timeout: int = 1) -> bool:
         """Pops one job from the queue and processes it. Returns True if job was processed."""
         job_data = await self.queue.dequeue(timeout=timeout)
         if not job_data:
             return False
-        await self.process_job(job_data, db)
-        return True
+        try:
+            await self.process_job(job_data, db)
+            return True
+        except Exception:
+            return True
 
 
 async def run_ingestion_worker_loop() -> None:
