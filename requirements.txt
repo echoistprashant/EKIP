@@ -1,44 +1,44 @@
 # API Framework and Server
-fastapi
-uvicorn[standard]
-python-multipart
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
 
 # Configuration and Validation
-pydantic
-pydantic-settings
-email-validator
-python-dotenv
+pydantic==2.14.0
+pydantic-settings==2.15.0
+email-validator==2.3.0
+python-dotenv==1.2.4
 
 # Structured JSON Logging
-structlog
+structlog==26.1.0
 
 # HTTP Client and API Testing
-httpx
+httpx==0.28.1
 
 # Testing
-pytest
-pytest-asyncio
+pytest==9.1.1
+pytest-asyncio==1.4.0
 
 # Linting and Type Checking
-ruff
-mypy
+ruff==0.16.10
+mypy==2.4.0
 
 # Database
-sqlalchemy[asyncio]
-asyncpg
-pgvector
-alembic
+SQLAlchemy[asyncio]==2.1.4
+asyncpg==0.32.0
+pgvector==0.5.1
+alembic==1.20.0
 
 # Auth & Security
-pyjwt
-bcrypt
+PyJWT==2.15.1
+bcrypt==5.0.0
 
 # Ingestion & Parsing
-pypdf
-markdown-it-py
+pypdf==6.20.1
+markdown-it-py==4.2.0
 
 # Embeddings & Vectors
-fastembed
+fastembed==0.9.0
 
 # Caching & Message Queue
-redis
+redis==8.1.0
