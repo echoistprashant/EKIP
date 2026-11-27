@@ -1,6 +1,6 @@
 from functools import lru_cache
 from typing import Literal
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Authentication & Security
-    JWT_SECRET: str = "ekip-super-secure-jwt-secret-key-change-in-production-2026"
+    JWT_SECRET: str | None = None
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
 
@@ -61,6 +61,27 @@ class Settings(BaseSettings):
             if "&channel_binding=require" in v:
                 v = v.replace("&channel_binding=require", "")
         return v
+
+    @model_validator(mode="after")
+    def validate_jwt_secret(self) -> "Settings":
+        if self.APP_ENV == "production":
+            if not self.JWT_SECRET:
+                raise ValueError("JWT_SECRET must be set in production environment")
+            if len(self.JWT_SECRET) < 32:
+                raise ValueError(
+                    f"JWT_SECRET is too weak (length {len(self.JWT_SECRET)} is less than 32 characters in production)"
+                )
+            weak_secrets = {
+                "secret",
+                "changeme",
+                "password",
+                "ekip-super-secure-jwt-secret-key-change-in-production-2026",
+            }
+            if self.JWT_SECRET.lower() in weak_secrets:
+                raise ValueError("JWT_SECRET cannot use default or insecure placeholder in production")
+        elif not self.JWT_SECRET:
+            self.JWT_SECRET = "dev-insecure-secret-local-testing-only-32chars"
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",
