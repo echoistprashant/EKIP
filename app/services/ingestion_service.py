@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
+import re
 import uuid
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
@@ -17,6 +18,27 @@ from app.workers.ingestion_worker import process_document_pipeline
 from app.workers.queue import get_ingestion_queue
 
 MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB limit
+
+
+def sanitize_filename(filename: str | None) -> str:
+    """
+    Sanitizes an uploaded filename to prevent directory traversal and filesystem attacks.
+    Uses Path(name).name plus a safe-character regex.
+    """
+    if not filename:
+        return "uploaded_document"
+
+    # Normalize backslashes to forward slashes before extracting basename
+    normalized = filename.replace("\\", "/")
+    base_name = Path(normalized).name
+
+    # Whitelist alphanumeric, underscore, dot, hyphen
+    sanitized = re.sub(r"[^a-zA-Z0-9_.-]", "_", base_name)
+    sanitized = sanitized.strip("._")
+    if not sanitized:
+        return "uploaded_document"
+    return sanitized
+
 
 
 class IngestionService:
@@ -89,13 +111,18 @@ class IngestionService:
                 await self.db.commit()
             return existing, 0, job
 
-        filename = file.filename or "uploaded_document"
+        filename = sanitize_filename(file.filename)
         mime_type = file.content_type or "application/octet-stream"
 
         # 5. Stage raw file to persistent disk
         upload_dir = Path(settings.UPLOAD_DIR) / str(user.tenant_id)
         upload_dir.mkdir(parents=True, exist_ok=True)
         file_path = upload_dir / f"{content_hash}_{filename}"
+        if not file_path.resolve().is_relative_to(upload_dir.resolve()):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid file path detected",
+            )
         file_path.write_bytes(content)
 
         # 6. Create Document record in DB
