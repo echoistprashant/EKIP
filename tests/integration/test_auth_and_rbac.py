@@ -52,18 +52,26 @@ async def test_auth_and_rbac_flow():
         assert me_res.status_code == 200
         assert me_res.json()["email"] == admin_email
 
-        # 4. TEST: Register Viewer in same tenant
+        # 4. TEST: Admin creates invite for Viewer, Viewer registers with invite token
+        invite_res = await client.post(
+            "/api/v1/auth/invite",
+            headers=admin_headers,
+            json={"role": "viewer", "expires_hours": 24},
+        )
+        assert invite_res.status_code == 201
+        invite_token = invite_res.json()["invite_token"]
+
         viewer_email = f"viewer_{suffix}@tenanta.com"
         reg_v_res = await client.post(
             "/api/v1/auth/register",
             json={
                 "email": viewer_email,
                 "password": "viewerpassword123",
-                "role": "viewer",
-                "tenant_name": f"TenantA_{suffix}",
+                "invite_token": invite_token,
             },
         )
         assert reg_v_res.status_code == 201
+        assert reg_v_res.json()["role"] == "viewer"
 
         login_v_res = await client.post(
             "/api/v1/auth/login",

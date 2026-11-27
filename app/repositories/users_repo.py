@@ -36,13 +36,22 @@ class UsersRepository:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_or_create_tenant(self, name: str) -> Tenant:
-        """Fetch existing tenant by name or create a new one."""
+    async def get_tenant_by_name(self, name: str) -> Tenant | None:
+        """Fetch tenant by name."""
         stmt = select(Tenant).where(Tenant.name == name)
         result = await self.db.execute(stmt)
-        tenant = result.scalar_one_or_none()
+        return result.scalar_one_or_none()
+
+    async def create_tenant(self, name: str) -> Tenant:
+        """Create a new tenant with a unique name."""
+        tenant = Tenant(name=name)
+        self.db.add(tenant)
+        await self.db.flush()
+        return tenant
+
+    async def get_or_create_tenant(self, name: str) -> Tenant:
+        """Fetch existing tenant by name or create a new one."""
+        tenant = await self.get_tenant_by_name(name)
         if not tenant:
-            tenant = Tenant(name=name)
-            self.db.add(tenant)
-            await self.db.flush()
+            tenant = await self.create_tenant(name)
         return tenant

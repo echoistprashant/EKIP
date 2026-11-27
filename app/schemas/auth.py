@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -24,8 +25,20 @@ class TokenPayload(BaseModel):
 class UserRegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6)
-    role: Literal["viewer", "editor", "admin", "evaluator"] = "viewer"
     tenant_name: str | None = None
+    invite_token: str | None = None
+
+
+class InviteCreateRequest(BaseModel):
+    role: Literal["viewer", "editor", "admin", "evaluator"] = "viewer"
+    expires_hours: int = Field(default=48, ge=1, le=168)
+
+
+class InviteResponse(BaseModel):
+    invite_token: str
+    tenant_id: uuid.UUID
+    role: str
+    expires_at: datetime
 
 
 class UserResponse(BaseModel):
