@@ -1,8 +1,12 @@
 from collections.abc import AsyncIterator
 import json
+import logging
 import time
 import uuid
+from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger("ekip.streaming")
 
 from app.cache import BaseSemanticCache, get_semantic_cache
 from app.core.config import settings
@@ -76,6 +80,7 @@ class StreamingQueryService:
         self,
         req: QueryRequest,
         current_user: User,
+        request: Request | None = None,
     ) -> AsyncIterator[str]:
         start_time = time.perf_counter()
         query_id = uuid.uuid4()
@@ -155,6 +160,9 @@ class StreamingQueryService:
                 # Stream cached answer tokens
                 words = cached.answer.split(" ")
                 for idx, word in enumerate(words):
+                    if request is not None and await request.is_disconnected():
+                        logger.info(f"SSE client disconnected during cached stream for query_id={query_id}.")
+                        return
                     token_text = word if idx == len(words) - 1 else word + " "
                     yield sse_event("token", {"text": token_text})
 
@@ -280,11 +288,19 @@ class StreamingQueryService:
         token_usage = None
 
         async for chunk in self.llm_client.stream(llm_request):
+            if request is not None and await request.is_disconnected():
+                logger.info(f"SSE client disconnected for query_id={query_id}. Stopping generation and aborting DB write.")
+                return
+
             if chunk.text:
                 full_answer_parts.append(chunk.text)
                 yield sse_event("token", {"text": chunk.text})
             if chunk.usage:
                 token_usage = chunk.usage
+
+        if request is not None and await request.is_disconnected():
+            logger.info(f"SSE client disconnected after generation for query_id={query_id}. Aborting DB write.")
+            return
 
         full_answer = "".join(full_answer_parts)
         is_abstained = self.prompt_manager.is_abstention(full_answer)

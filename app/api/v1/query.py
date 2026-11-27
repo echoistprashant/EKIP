@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -34,6 +34,7 @@ async def ask_rag(
 @router.post("/stream")
 async def ask_rag_stream(
     req: QueryRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     _rate_limit: None = Depends(rate_limit_query),
     db: AsyncSession = Depends(get_db),
@@ -48,7 +49,7 @@ async def ask_rag_stream(
     service = StreamingQueryService(db)
     await check_token_budget(db, current_user.tenant_id)
     return StreamingResponse(
-        service.stream_query(req=req, current_user=current_user),
+        service.stream_query(req=req, current_user=current_user, request=request),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
