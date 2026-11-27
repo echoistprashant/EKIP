@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     # Database & Cache
     DATABASE_URL: str = "postgresql+asyncpg://ekip_user:ekip_password@localhost:5432/ekip_db"
     REDIS_URL: str = "redis://localhost:6379/0"
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
 
     # Authentication & Security
     JWT_SECRET: str | None = None
