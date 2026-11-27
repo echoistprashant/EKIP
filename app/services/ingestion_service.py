@@ -18,6 +18,7 @@ from app.workers.ingestion_worker import process_document_pipeline
 from app.workers.queue import get_ingestion_queue
 
 MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB limit
+UPLOAD_CHUNK_SIZE_BYTES = 64 * 1024  # 64 KB streaming chunks
 
 
 def sanitize_filename(filename: str | None) -> str:
@@ -68,18 +69,28 @@ class IngestionService:
                 detail="Collection not found or access denied",
             )
 
-        # 2. Read bytes & validate size
-        content = await file.read()
-        if len(content) == 0:
+        # 2. Read in 64 KB chunks & validate size limit (streaming rejection)
+        chunks: list[bytes] = []
+        total_bytes = 0
+        while True:
+            chunk = await file.read(UPLOAD_CHUNK_SIZE_BYTES)
+            if not chunk:
+                break
+            total_bytes += len(chunk)
+            if total_bytes > MAX_FILE_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"File exceeds maximum size limit of {MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB",
+                )
+            chunks.append(chunk)
+
+        if total_bytes == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Uploaded file is empty",
             )
-        if len(content) > MAX_FILE_SIZE_BYTES:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"File exceeds maximum size limit of {MAX_FILE_SIZE_BYTES // (1024*1024)} MB",
-            )
+
+        content = b"".join(chunks)
 
         # 3. Calculate SHA-256 for idempotency
         content_hash = hashlib.sha256(content).hexdigest()
