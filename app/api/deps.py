@@ -58,6 +58,24 @@ async def get_current_user(
     return user
 
 
+async def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    """Optionally authenticate user if Bearer token is provided, without raising 401."""
+    if not credentials:
+        return None
+    try:
+        payload = decode_access_token(credentials.credentials)
+        user_id_str = payload.get("sub")
+        if not user_id_str:
+            return None
+        users_repo = UsersRepository(db)
+        return await users_repo.get_by_id(uuid.UUID(user_id_str))
+    except Exception:
+        return None
+
+
 def require_role(*allowed_roles: str) -> Callable:
     """
     Dependency factory to enforce Role-Based Access Control (RBAC).

@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.refresh_token import get_refresh_token_manager
 from app.core.security import (
     create_access_token,
     create_invite_token,
@@ -120,8 +121,62 @@ class AuthService:
             role=user.role,
         )
 
+        token_mgr = get_refresh_token_manager()
+        refresh_token = await token_mgr.create_refresh_token(
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+        )
+
         return TokenResponse(
             access_token=token,
+            refresh_token=refresh_token,
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
+
+    async def refresh(self, refresh_token: str) -> TokenResponse:
+        """Validate refresh token and issue new 30-minute access token and rotated refresh token."""
+        token_mgr = get_refresh_token_manager()
+        data = await token_mgr.get_and_validate_token(refresh_token)
+        if not data:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or revoked refresh token",
+            )
+
+        user_id = uuid.UUID(data["user_id"])
+        user = await self.repo.get_by_id(user_id)
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive",
+            )
+
+        # Rotate refresh token: revoke old token and issue fresh one
+        await token_mgr.revoke_refresh_token(refresh_token)
+        new_refresh_token = await token_mgr.create_refresh_token(
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+        )
+        new_access_token = create_access_token(
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            role=user.role,
+        )
+
+        return TokenResponse(
+            access_token=new_access_token,
+            refresh_token=new_refresh_token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        )
+
+    async def logout(self, refresh_token: str | None = None, current_user: User | None = None) -> dict[str, str]:
+        """Revoke refresh token and/or all user tokens."""
+        token_mgr = get_refresh_token_manager()
+        if refresh_token:
+            await token_mgr.revoke_refresh_token(refresh_token)
+        if current_user:
+            await token_mgr.revoke_all_user_tokens(current_user.id)
+
+        return {"status": "logged_out", "detail": "Tokens successfully revoked"}

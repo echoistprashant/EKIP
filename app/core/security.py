@@ -43,6 +43,7 @@ def create_access_token(
         "sub": str(user_id),
         "tenant_id": str(tenant_id),
         "role": role,
+        "jti": str(uuid.uuid4()),
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
     }
