@@ -4,10 +4,16 @@ from pypdf import PdfReader
 from app.rag.parsing.base import Element
 
 
+MAX_PDF_PAGES = 100
+
+
 class PDFParser:
     """Extracts structured elements and page numbers from PDF files."""
 
     def parse(self, content: bytes, filename: str) -> list[Element]:
+        if not content.startswith(b"%PDF-"):
+            raise ValueError("Invalid PDF file: Missing %PDF- magic bytes signature")
+
         try:
             reader = PdfReader(io.BytesIO(content))
         except Exception as e:
@@ -15,6 +21,11 @@ class PDFParser:
 
         if len(reader.pages) == 0:
             raise ValueError("PDF file contains no pages")
+
+        if len(reader.pages) > MAX_PDF_PAGES:
+            raise ValueError(
+                f"PDF exceeds maximum allowed limit of {MAX_PDF_PAGES} pages (found {len(reader.pages)})"
+            )
 
         elements: list[Element] = []
         current_heading_path: list[str] = []

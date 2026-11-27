@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
 import hashlib
+import io
 from pathlib import Path
 import re
 import uuid
 from fastapi import HTTPException, UploadFile, status
+from pypdf import PdfReader
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +21,7 @@ from app.workers.queue import get_ingestion_queue
 
 MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB limit
 UPLOAD_CHUNK_SIZE_BYTES = 64 * 1024  # 64 KB streaming chunks
+MAX_PDF_PAGES = 100
 
 
 def sanitize_filename(filename: str | None) -> str:
@@ -123,7 +126,45 @@ class IngestionService:
             return existing, 0, job
 
         filename = sanitize_filename(file.filename)
-        mime_type = file.content_type or "application/octet-stream"
+
+        # Validate file type and PDF magic bytes / page ceiling
+        is_pdf_by_name = filename.lower().endswith(".pdf")
+        is_pdf_by_mime = (file.content_type or "").lower() == "application/pdf"
+        has_pdf_magic = content.startswith(b"%PDF-")
+
+        if (is_pdf_by_name or is_pdf_by_mime) and not has_pdf_magic:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid PDF file: Missing %PDF- magic bytes signature",
+            )
+
+        if has_pdf_magic:
+            mime_type = "application/pdf"
+            try:
+                reader = PdfReader(io.BytesIO(content))
+                if len(reader.pages) == 0:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="PDF file contains no pages",
+                    )
+                if len(reader.pages) > MAX_PDF_PAGES:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"PDF exceeds maximum allowed limit of {MAX_PDF_PAGES} pages (found {len(reader.pages)})",
+                    )
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Corrupt or unreadable PDF: {e}",
+                )
+        elif filename.lower().endswith(".md") or (file.content_type or "").lower() == "text/markdown":
+            mime_type = "text/markdown"
+        elif filename.lower().endswith(".txt") or (file.content_type or "").lower() == "text/plain":
+            mime_type = "text/plain"
+        else:
+            mime_type = file.content_type or "application/octet-stream"
 
         # 5. Stage raw file to persistent disk
         upload_dir = Path(settings.UPLOAD_DIR) / str(user.tenant_id)
