@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "data/uploads"
     INGESTION_QUEUE_NAME: str = "ekip:ingestion_jobs"
 
+    # Rate Limiting
+    RATE_LIMIT_QUERY_PER_MINUTE: int = 20
+    RATE_LIMIT_UPLOAD_PER_MINUTE: int = 10
+
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_db_url(cls, v: str) -> str:

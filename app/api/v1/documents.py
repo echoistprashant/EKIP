@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_role
+from app.core.rate_limiter import rate_limit_upload
 from app.db.session import get_db
 from app.models.document import Document
 from app.models.job import IngestionJob
@@ -24,6 +25,7 @@ async def upload_document(
     file: UploadFile = File(...),
     async_mode: bool = Form(default=False),
     current_user: User = Depends(require_role("admin", "editor")),
+    _rate_limit: None = Depends(rate_limit_upload),
     db: AsyncSession = Depends(get_db),
 ):
     """

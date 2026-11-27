@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.rate_limiter import rate_limit_query
 from app.db.session import get_db
 from app.models.user import User
 from app.rag.retrieval.base import AccessScope
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/query", tags=["RAG & Search"])
 async def ask_rag(
     req: QueryRequest,
     current_user: User = Depends(get_current_user),
+    _rate_limit: None = Depends(rate_limit_query),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -32,6 +34,7 @@ async def ask_rag(
 async def ask_rag_stream(
     req: QueryRequest,
     current_user: User = Depends(get_current_user),
+    _rate_limit: None = Depends(rate_limit_query),
     db: AsyncSession = Depends(get_db),
 ):
     """
