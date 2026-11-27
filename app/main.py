@@ -1,8 +1,11 @@
 import asyncio
 from contextlib import asynccontextmanager
 from uuid import uuid4
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import HTMLResponse, JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+import structlog
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.collections import router as collections_router
@@ -13,8 +16,13 @@ from app.api.v1.evaluation import router as evaluation_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.analytics import router as analytics_router
 from app.core.config import settings
+from app.core.logging import configure_logging, get_logger
 from app.ui.dashboard_html import DASHBOARD_HTML
 from app.workers.worker import run_ingestion_worker_loop
+
+# Initialize structured JSON logging
+configure_logging()
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -43,13 +51,96 @@ def create_app() -> FastAPI:
         request: Request,
         call_next,
     ):
-        request_id = str(uuid4())
+        request_id = request.headers.get("X-Request-ID") or str(uuid4())
         request.state.request_id = request_id
+        structlog.contextvars.clear_contextvars()
+        structlog.contextvars.bind_contextvars(request_id=request_id)
 
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except StarletteHTTPException as exc:
+            headers = dict(exc.headers) if exc.headers else {}
+            response = JSONResponse(
+                status_code=exc.status_code,
+                content={
+                    "detail": exc.detail,
+                    "request_id": request_id,
+                },
+                headers=headers,
+            )
+        except RequestValidationError as exc:
+            response = JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                content={
+                    "detail": exc.errors(),
+                    "request_id": request_id,
+                },
+            )
+        except Exception as exc:
+            logger.error(
+                "Unhandled server exception",
+                request_id=request_id,
+                path=str(request.url.path),
+                method=request.method,
+                exc_info=exc,
+            )
+            response = JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "detail": "Internal server error",
+                    "request_id": request_id,
+                },
+            )
+        finally:
+            structlog.contextvars.clear_contextvars()
+
         response.headers["X-Request-ID"] = request_id
-
         return response
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+        request_id = getattr(request.state, "request_id", None) or str(uuid4())
+        headers = dict(exc.headers) if exc.headers else {}
+        headers["X-Request-ID"] = request_id
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "detail": exc.detail,
+                "request_id": request_id,
+            },
+            headers=headers,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        request_id = getattr(request.state, "request_id", None) or str(uuid4())
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "detail": exc.errors(),
+                "request_id": request_id,
+            },
+            headers={"X-Request-ID": request_id},
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        request_id = getattr(request.state, "request_id", None) or str(uuid4())
+        logger.error(
+            "Unhandled server exception",
+            request_id=request_id,
+            path=str(request.url.path),
+            method=request.method,
+            exc_info=exc,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "detail": "Internal server error",
+                "request_id": request_id,
+            },
+            headers={"X-Request-ID": request_id},
+        )
 
     # Mount v1 routers
     app.include_router(health_router, prefix="/api/v1")
