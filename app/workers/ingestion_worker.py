@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,16 +44,16 @@ async def process_document_pipeline(
         doc.status = "processing"
         await db.flush()
 
-        # Step 1: Parse
+        # Step 1: Parse (offload from event loop)
         parser = parser_registry.get_parser(mime_type, filename)
-        elements = parser.parse(raw_content, filename)
+        elements = await asyncio.to_thread(parser.parse, raw_content, filename)
 
-        # Step 2: Clean
-        cleaned_elements = document_cleaner.clean(elements)
+        # Step 2: Clean (offload from event loop)
+        cleaned_elements = await asyncio.to_thread(document_cleaner.clean, elements)
 
-        # Step 3: Chunk
+        # Step 3: Chunk (offload from event loop)
         chunker = StructuralChunker(max_tokens=400, overlap_tokens=50)
-        chunks_data = chunker.chunk(cleaned_elements, doc.title)
+        chunks_data = await asyncio.to_thread(chunker.chunk, cleaned_elements, doc.title)
 
         # Step 4: Compute Real Vector Embeddings
         embedder = get_embedder()

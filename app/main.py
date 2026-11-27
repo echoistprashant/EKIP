@@ -12,19 +12,23 @@ from app.api.v1.query import router as query_router
 from app.api.v1.evaluation import router as evaluation_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.analytics import router as analytics_router
+from app.core.config import settings
 from app.ui.dashboard_html import DASHBOARD_HTML
 from app.workers.worker import run_ingestion_worker_loop
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    worker_task = asyncio.create_task(run_ingestion_worker_loop())
+    worker_task = None
+    if settings.RUN_IN_PROCESS_WORKER:
+        worker_task = asyncio.create_task(run_ingestion_worker_loop())
     yield
-    worker_task.cancel()
-    try:
-        await worker_task
-    except asyncio.CancelledError:
-        pass
+    if worker_task is not None:
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
 
 
 def create_app() -> FastAPI:

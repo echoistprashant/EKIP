@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 import logging
 from pathlib import Path
@@ -66,20 +67,20 @@ class IngestionWorker:
             raw_content = file_path.read_bytes()
 
             parser = parser_registry.get_parser(mime_type, filename)
-            elements = parser.parse(raw_content, filename)
+            elements = await asyncio.to_thread(parser.parse, raw_content, filename)
 
             # 3. Stage: Cleaning
             job.stage = "cleaning"
             job.progress = 40
             await db.commit()
-            cleaned_elements = document_cleaner.clean(elements)
+            cleaned_elements = await asyncio.to_thread(document_cleaner.clean, elements)
 
             # 4. Stage: Chunking
             job.stage = "chunking"
             job.progress = 60
             await db.commit()
             chunker = StructuralChunker(max_tokens=400, overlap_tokens=50)
-            chunks_data = chunker.chunk(cleaned_elements, doc.title)
+            chunks_data = await asyncio.to_thread(chunker.chunk, cleaned_elements, doc.title)
 
             # 5. Stage: Embedding
             job.stage = "embedding"
@@ -179,3 +180,12 @@ async def run_ingestion_worker_loop() -> None:
         except Exception as e:
             logger.warning(f"Error in background ingestion loop: {e}")
             await asyncio.sleep(1)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+    logger.info("Starting standalone Ingestion Worker process...")
+    asyncio.run(run_ingestion_worker_loop())

@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_QUERY_PER_MINUTE: int = 20
     RATE_LIMIT_UPLOAD_PER_MINUTE: int = 10
 
+    # Ingestion Worker Settings
+    RUN_IN_PROCESS_WORKER: bool = True  # Free-tier default: runs inside web server; set False for standalone worker
+
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_db_url(cls, v: str) -> str:
