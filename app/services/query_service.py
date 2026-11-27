@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cache import BaseSemanticCache, get_semantic_cache
 from app.core.config import settings
+from app.core.token_budget import check_token_budget
 from app.evaluation import RAGTriadEvaluator, get_evaluator
 from app.llm import LLMClient, LLMRequest, get_llm_client
 from app.models.query_log import QueryCitation, QueryLog
@@ -143,6 +144,9 @@ class QueryService:
         start_time = time.perf_counter()
         query_id = uuid.uuid4()
         trace_id = f"trc-{uuid.uuid4().hex[:12]}"
+
+        # 0. Enforce tenant monthly token budget
+        await check_token_budget(self.db, current_user.tenant_id)
 
         # 1. Establish tenant-scoped access perimeter
         scope = AccessScope(

@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.rate_limiter import rate_limit_query
+from app.core.token_budget import check_token_budget
 from app.db.session import get_db
 from app.models.user import User
 from app.rag.retrieval.base import AccessScope
@@ -45,6 +46,7 @@ async def ask_rag_stream(
     from app.services.streaming_service import StreamingQueryService
 
     service = StreamingQueryService(db)
+    await check_token_budget(db, current_user.tenant_id)
     return StreamingResponse(
         service.stream_query(req=req, current_user=current_user),
         media_type="text/event-stream",
