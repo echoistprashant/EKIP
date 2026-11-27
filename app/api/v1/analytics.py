@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import require_role
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.analytics import AnalyticsOverviewResponse
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/analytics", tags=["Analytics & Observability"])
     summary="Get aggregated telemetry, RAG Triad quality, cost, and feedback metrics",
 )
 async def get_analytics_overview(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ) -> AnalyticsOverviewResponse:
     service = AnalyticsService(db)
