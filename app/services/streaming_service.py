@@ -307,12 +307,15 @@ class StreamingQueryService:
 
         # 7. Verify citations
         citations: list[CitationItem] = []
+        citation_failed = False
         if not is_abstained:
             verification = self.citation_verifier.verify(
                 answer=full_answer,
                 source_map=built_context.source_map,
             )
             citations = verification.citations
+            if bool(verification.invalid_source_ids) or bool(verification.unsupported_source_ids) or (bool(built_context.sources) and not verification.citations):
+                citation_failed = True
 
         latency_ms = int((time.perf_counter() - start_time) * 1000)
         prompt_tokens = token_usage.prompt_tokens if token_usage else len(messages[1].content.split())
@@ -328,7 +331,16 @@ class StreamingQueryService:
             groundedness_score = eval_result.groundedness
             context_relevance_score = eval_result.context_relevance
             answer_relevance_score = eval_result.answer_relevance
-            hallucination_flag = eval_result.hallucination_warning
+            hallucination_flag = eval_result.hallucination_warning or citation_failed
+            if citation_failed or eval_result.hallucination_warning:
+                logger.warning(
+                    "Abstention gate triggered in stream for query_id=%s (citation_failed=%s, hallucination_warning=%s). "
+                    "Original ungrounded answer: %s",
+                    query_id,
+                    citation_failed,
+                    eval_result.hallucination_warning,
+                    full_answer,
+                )
         else:
             groundedness_score = 1.0
             context_relevance_score = 0.0
@@ -370,7 +382,7 @@ class StreamingQueryService:
         await self.db.commit()
 
         # 9. Store in Semantic Cache
-        if not is_abstained and self.cache is not None:
+        if not is_abstained and not hallucination_flag and self.cache is not None:
             if query_embedding is None and self.embedder is not None:
                 query_embedding = await self.embedder.embed_query(req.query)
             final_res = QueryResponse(

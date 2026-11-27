@@ -1,7 +1,10 @@
 import asyncio
+import logging
 import time
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.cache import BaseSemanticCache, get_semantic_cache
 from app.core.config import settings
@@ -322,12 +325,15 @@ class QueryService:
 
         # 11. Extract and verify citations
         citations: list[CitationItem] = []
+        citation_failed = False
         if not is_abstained:
             verification = self.citation_verifier.verify(
                 answer=llm_result.content,
                 source_map=built_context.source_map,
             )
             citations = verification.citations
+            if bool(verification.invalid_source_ids) or bool(verification.unsupported_source_ids) or (bool(built_context.sources) and not verification.citations):
+                citation_failed = True
 
         # 12. Run RAG Triad Evaluation & Hallucination Guardrails
         eval_result = await self.evaluator.evaluate(
@@ -335,6 +341,22 @@ class QueryService:
             context=built_context.context_text,
             answer=llm_result.content,
         )
+
+        final_answer = llm_result.content
+        if not is_abstained and (citation_failed or eval_result.hallucination_warning):
+            logger.warning(
+                "Abstention gate triggered (citation_failed=%s, hallucination_warning=%s) for query_id=%s. "
+                "Original ungrounded answer: %s",
+                citation_failed,
+                eval_result.hallucination_warning,
+                query_id,
+                llm_result.content,
+            )
+            final_answer = (
+                "I do not have enough information in the provided documents to answer this question."
+            )
+            is_abstained = True
+            citations = []
 
         latency_ms = int((time.perf_counter() - start_time) * 1000)
 
@@ -345,11 +367,11 @@ class QueryService:
             user_id=current_user.id,
             question=req.query,
             rewritten_query=effective_rewritten,
-            answer=llm_result.content,
+            answer=final_answer,
             abstained=is_abstained,
             trace_id=trace_id,
             prompt_version=prompt_ver,
-            model=llm_result.model,
+            model=llm_result.model if not is_abstained else "abstention-gate",
             input_tokens=llm_result.usage.prompt_tokens,
             output_tokens=llm_result.usage.completion_tokens,
             cost_usd=llm_result.cost_usd,
@@ -357,7 +379,7 @@ class QueryService:
             groundedness_score=eval_result.groundedness,
             context_relevance_score=eval_result.context_relevance,
             answer_relevance_score=eval_result.answer_relevance,
-            hallucination_flag=eval_result.hallucination_warning,
+            hallucination_flag=eval_result.hallucination_warning or citation_failed,
         )
         self.db.add(log_record)
 
@@ -377,23 +399,23 @@ class QueryService:
             query=req.query,
             rewritten_query=effective_rewritten,
             query_transformation_strategy=transform_res.strategy_used,
-            answer=llm_result.content,
+            answer=final_answer,
             citations=citations,
             abstained=is_abstained,
             cached=False,
-            model=llm_result.model,
+            model=llm_result.model if not is_abstained else "abstention-gate",
             prompt_version=prompt_ver,
             input_tokens=llm_result.usage.prompt_tokens,
             output_tokens=llm_result.usage.completion_tokens,
             cost_usd=round(float(llm_result.cost_usd), 6),
             latency_ms=latency_ms,
             groundedness_score=eval_result.groundedness,
-            hallucination_warning=eval_result.hallucination_warning,
+            hallucination_warning=eval_result.hallucination_warning or citation_failed,
             query_id=query_id,
         )
 
         # 14. Populate Semantic Cache if not abstained and passed guardrails
-        if not is_abstained and not eval_result.hallucination_warning and self.cache is not None:
+        if not is_abstained and not eval_result.hallucination_warning and not citation_failed and self.cache is not None:
             if query_embedding is None and self.embedder is not None:
                 query_embedding = await self.embedder.embed_query(req.query)
             await self.cache.set(
