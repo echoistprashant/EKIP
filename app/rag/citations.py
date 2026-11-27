@@ -105,8 +105,8 @@ class CitationVerifier:
 
                 matched_keywords = [w for w in keywords if w in chunk_text_lower]
                 overlap_ratio = len(matched_keywords) / len(keywords)
-                # If at least 25% of content words match the cited chunk, consider grounded
-                if overlap_ratio >= 0.25:
+                # If at least 45% of content words match the cited chunk, consider grounded
+                if overlap_ratio >= 0.45:
                     has_lexical_grounding = True
                     break
 
