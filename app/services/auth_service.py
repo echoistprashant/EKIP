@@ -65,11 +65,11 @@ class AuthService:
             tenant = await self.repo.create_tenant(tenant_name)
             role = "admin"
 
-        existing_user = await self.repo.get_by_email(req.email, tenant_id=tenant.id)
+        existing_user = await self.repo.get_by_email(req.email)
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="User with this email already exists in this tenant",
+                detail="User with this email already exists",
             )
 
         hashed_password = get_password_hash(req.password)

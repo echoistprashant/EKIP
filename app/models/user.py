@@ -14,7 +14,7 @@ class User(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="viewer")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -26,5 +26,4 @@ class User(Base):
 
     __table_args__ = (
         CheckConstraint("role IN ('viewer', 'editor', 'admin', 'evaluator')", name="valid_roles"),
-        UniqueConstraint("tenant_id", "email", name="uq_tenant_user_email"),
     )
