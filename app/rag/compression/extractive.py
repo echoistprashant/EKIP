@@ -1,5 +1,6 @@
 import re
-from typing import Sequence
+from collections.abc import Sequence
+
 from app.rag.retrieval.base import Candidate
 
 # Common English stopwords to ignore when measuring sentence query relevance

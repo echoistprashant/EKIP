@@ -1,6 +1,8 @@
-import pytest_asyncio
 from collections.abc import AsyncGenerator
+
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.session import AsyncSessionLocal, engine
 
 

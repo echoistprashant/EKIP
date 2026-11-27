@@ -1,8 +1,9 @@
 import uuid
+
 import pytest
 
 from app.rag.compression.extractive import ExtractiveSentenceCompressor
-from app.rag.rerank.fastembed_reranker import _safe_sigmoid, FastEmbedReranker
+from app.rag.rerank.fastembed_reranker import _safe_sigmoid
 from app.rag.rerank.mock_reranker import MockReranker
 from app.rag.retrieval.base import Candidate
 

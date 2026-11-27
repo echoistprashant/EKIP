@@ -1,8 +1,9 @@
 import io
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi import HTTPException, UploadFile
+
 import pytest
+from fastapi import HTTPException, UploadFile
 
 from app.models.collection import Collection
 from app.models.user import User

@@ -1,4 +1,5 @@
 import uuid
+
 from app.rag.retrieval.base import Candidate
 
 

@@ -1,22 +1,22 @@
 from app.db.base import Base
-from app.models.tenant import Tenant
-from app.models.user import User
+from app.models.chunk import Chunk
 from app.models.collection import Collection
 from app.models.document import Document
-from app.models.chunk import Chunk
-from app.models.query_log import QueryLog, QueryCitation
 from app.models.feedback import QueryFeedback
 from app.models.job import IngestionJob
+from app.models.query_log import QueryCitation, QueryLog
+from app.models.tenant import Tenant
+from app.models.user import User
 
 __all__ = [
     "Base",
-    "Tenant",
-    "User",
+    "Chunk",
     "Collection",
     "Document",
-    "Chunk",
-    "QueryLog",
+    "IngestionJob",
     "QueryCitation",
     "QueryFeedback",
-    "IngestionJob",
+    "QueryLog",
+    "Tenant",
+    "User",
 ]

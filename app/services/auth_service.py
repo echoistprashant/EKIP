@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
 import jwt
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,7 +93,7 @@ class AuthService:
             role=req.role,
             expires_delta=expires_delta,
         )
-        expires_at = datetime.now(timezone.utc) + expires_delta
+        expires_at = datetime.now(UTC) + expires_delta
         return InviteResponse(
             invite_token=token,
             tenant_id=admin_user.tenant_id,

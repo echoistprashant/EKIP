@@ -1,8 +1,9 @@
 import uuid
+
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import Computed, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from pgvector.sqlalchemy import Vector
 
 from app.db.base import Base
 

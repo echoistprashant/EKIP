@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Protocol
+
 from app.rag.parsing.base import Element
 
 

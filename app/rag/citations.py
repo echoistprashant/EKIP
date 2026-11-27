@@ -1,7 +1,5 @@
 import re
 from dataclasses import dataclass
-from typing import Sequence
-import uuid
 
 from app.rag.retrieval.base import Candidate
 from app.schemas.query import CitationItem

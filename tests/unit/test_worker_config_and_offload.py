@@ -1,13 +1,12 @@
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
-from app.core.config import settings
 from app.main import lifespan
 from app.models.document import Document
 from app.workers.ingestion_worker import process_document_pipeline
-from app.workers.worker import IngestionWorker
 
 
 @pytest.mark.asyncio

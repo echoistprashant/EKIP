@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import bcrypt
@@ -33,7 +33,7 @@ def create_access_token(
     Generate signed JWT containing user_id, tenant_id, and role.
     Signature prevents client tampering.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if expires_delta:
         expire = now + expires_delta
     else:
@@ -70,11 +70,8 @@ def create_invite_token(
     """
     Generate signed JWT invite token for joining a tenant with a pre-assigned role.
     """
-    now = datetime.now(timezone.utc)
-    if expires_delta:
-        expire = now + expires_delta
-    else:
-        expire = now + timedelta(hours=48)
+    now = datetime.now(UTC)
+    expire = now + expires_delta if expires_delta else now + timedelta(hours=48)
 
     payload: dict[str, Any] = {
         "sub": "invite",

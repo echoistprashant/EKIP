@@ -9,7 +9,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+
   <script>
     tailwind.config = {
       theme: {
@@ -111,7 +111,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
           <!-- THE CHATGPT-STYLE DROPDOWN CARD (ALL CONTROLS FROM PICTURE) -->
           <div id="chatgpt-dropdown-menu" class="hidden absolute left-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm sm:max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 p-4 sm:p-5 space-y-4 max-h-[82vh] overflow-y-auto custom-scrollbar">
-            
+
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
               <span class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
                 <i class="fa-solid fa-sliders text-brand-600"></i> Pipeline Configuration
@@ -155,7 +155,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             <!-- 3. PIPELINE SAFEGUARDS -->
             <div class="border-t border-slate-100 pt-3.5 space-y-2.5">
               <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Pipeline Safeguards</span>
-              
+
               <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/70 transition">
                 <span class="text-xs font-semibold text-slate-700">Real-Time Streaming (SSE)</span>
                 <input type="checkbox" id="chat-stream-toggle" checked class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
@@ -223,7 +223,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <!-- FLOATING PROMPT INPUT CAPSULE (WITH MOBILE SAFE AREA PADDING) -->
         <div class="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 bg-gradient-to-t from-white via-white/95 to-transparent">
           <form onsubmit="handleSendQuery(event)" class="max-w-4xl mx-auto flex gap-2 sm:gap-3 bg-white border border-slate-300/80 rounded-2xl p-1.5 shadow-lg shadow-slate-200/60 focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-600 transition">
-            <input type="text" id="chat-input" placeholder="Ask a question about your documents..." 
+            <input type="text" id="chat-input" placeholder="Ask a question about your documents..."
                    class="flex-1 bg-transparent px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none">
             <button type="submit" id="send-btn" class="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md shadow-brand-500/25 transition flex items-center gap-1.5 sm:gap-2 shrink-0">
               <span class="hidden sm:inline">Send</span> <i class="fa-solid fa-arrow-up text-[10px]"></i>
@@ -255,7 +255,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
               <i class="fa-solid fa-cloud-arrow-up text-brand-600"></i> Document Dropzone
             </h3>
-            
+
             <form id="upload-form" onsubmit="handleUploadDocument(event)" class="space-y-4">
               <div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1.5">Target Collection</label>
@@ -299,7 +299,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 <i class="fa-solid fa-bolt text-amber-500"></i> Active Task Worker
               </h3>
               <p class="text-xs text-slate-500 font-medium mb-4">Background task status and stage execution.</p>
-              
+
               <div id="active-job-box" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
                 <div class="flex items-center justify-between text-xs font-bold">
                   <span class="text-slate-800 truncate max-w-[160px]" id="job-doc-name">Document</span>
@@ -467,7 +467,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <h3 class="text-base font-bold text-slate-900">Enterprise Authentication</h3>
         <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      
+
       <div class="flex border-b border-slate-100 text-xs font-bold">
         <button id="auth-tab-login" onclick="setAuthMode('login')" class="flex-1 py-2 text-brand-600 border-b-2 border-brand-600">Login</button>
         <button id="auth-tab-register" onclick="setAuthMode('register')" class="flex-1 py-2 text-slate-400">Register Tenant</button>
@@ -813,8 +813,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         const selects = [document.getElementById('chat-collection-select'), document.getElementById('upload-collection-select')];
         selects.forEach(select => {
           if (!select) return;
-          select.innerHTML = collections.length === 0 
-            ? '<option value="">No collections found - please create one</option>' 
+          select.innerHTML = collections.length === 0
+            ? '<option value="">No collections found - please create one</option>'
             : collections.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
         });
         handleCollectionSelectChange();

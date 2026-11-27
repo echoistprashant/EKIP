@@ -1,8 +1,9 @@
 import io
 import re
-from pypdf import PdfReader
-from app.rag.parsing.base import Element
 
+from pypdf import PdfReader
+
+from app.rag.parsing.base import Element
 
 MAX_PDF_PAGES = 100
 

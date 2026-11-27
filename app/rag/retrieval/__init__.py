@@ -6,10 +6,10 @@ from app.rag.retrieval.rrf import reciprocal_rank_fusion
 
 __all__ = [
     "AccessScope",
-    "Candidate",
     "BaseRetriever",
+    "Candidate",
     "DenseRetriever",
-    "LexicalRetriever",
     "HybridRetriever",
+    "LexicalRetriever",
     "reciprocal_rank_fusion",
 ]

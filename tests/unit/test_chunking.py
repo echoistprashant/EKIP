@@ -5,13 +5,13 @@ from app.rag.parsing.markdown import MarkdownParser
 
 def test_structural_chunker_adds_contextual_headers():
     doc_title = "Global Travel & Expense Policy"
-    md_content = """# North America Policy
+    md_content = b"""# North America Policy
 ## Travel Allowances
 Employees can claim $150 per day for meals during domestic business trips. Receipts are required.
 
 ## Car Rental
 Economy cars must be booked through the company portal. Upgrades require director approval.
-""".encode("utf-8")
+"""
 
     parser = MarkdownParser()
     elements = parser.parse(md_content, "travel_policy.md")

@@ -1,5 +1,6 @@
-from collections.abc import AsyncIterator
 import logging
+from collections.abc import AsyncIterator
+
 from app.llm.circuit_breaker import CircuitBreaker
 from app.llm.client import LLMClient, LLMRequest, LLMResult, StreamChunk
 from app.llm.retry import execute_with_retry

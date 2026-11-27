@@ -1,5 +1,5 @@
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
 from app.core.config import Settings
 
@@ -32,7 +32,7 @@ def test_production_accepts_strong_jwt_secret():
     """App successfully starts in production when a strong secret (>= 32 chars) is provided."""
     strong_secret = "a" * 32
     settings = Settings(APP_ENV="production", JWT_SECRET=strong_secret)
-    assert settings.JWT_SECRET == strong_secret
+    assert strong_secret == settings.JWT_SECRET
 
 
 def test_local_environment_provides_dev_fallback_when_omitted():

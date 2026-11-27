@@ -1,7 +1,5 @@
 import re
-from typing import Sequence
 
-from app.cache.base import compute_cosine_similarity
 from app.evaluation.models import TriadEvaluationResult
 from app.rag.embeddings.base import BaseEmbedder
 

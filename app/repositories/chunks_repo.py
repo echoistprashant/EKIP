@@ -1,6 +1,8 @@
 import uuid
-from sqlalchemy import select, delete
+
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.chunk import Chunk
 
 
@@ -32,4 +34,4 @@ class ChunksRepository:
             Chunk.tenant_id == tenant_id
         )
         result = await self.db.execute(stmt)
-        return result.rowcount
+        return int(getattr(result, "rowcount", 0))

@@ -1,5 +1,6 @@
-from datetime import datetime, timezone
 import uuid
+from datetime import UTC, datetime
+
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,8 +21,8 @@ async def check_token_budget(db: AsyncSession, tenant_id: uuid.UUID) -> None:
     if not tenant or tenant.monthly_token_budget <= 0:
         return
 
-    now = datetime.now(timezone.utc)
-    start_of_month = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    now = datetime.now(UTC)
+    start_of_month = datetime(now.year, now.month, 1, tzinfo=UTC)
 
     usage_stmt = (
         select(func.coalesce(func.sum(QueryLog.input_tokens + QueryLog.output_tokens), 0))

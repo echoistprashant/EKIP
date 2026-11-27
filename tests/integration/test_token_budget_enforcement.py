@@ -1,7 +1,8 @@
-from datetime import datetime, timezone
 import uuid
-from httpx import ASGITransport, AsyncClient
+from datetime import UTC, datetime
+
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app.db.session import AsyncSessionLocal
@@ -58,7 +59,7 @@ async def test_monthly_token_budget_enforcement():
                 output_tokens=200,
                 cost_usd=0.001,
                 latency_ms=100,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             session.add(consumed_log)
             await session.commit()

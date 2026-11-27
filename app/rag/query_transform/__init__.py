@@ -1,6 +1,5 @@
 from typing import Literal
 
-from app.core.config import settings
 from app.rag.query_transform.base import BaseQueryTransformer, QueryTransformationResult
 from app.rag.query_transform.expansion import MultiQueryExpander
 from app.rag.query_transform.hyde import HyDETransformer
@@ -27,10 +26,10 @@ def get_query_transformer(
 
 __all__ = [
     "BaseQueryTransformer",
-    "QueryTransformationResult",
     "HyDETransformer",
+    "MockQueryTransformer",
     "MultiQueryExpander",
     "QueryRewriter",
-    "MockQueryTransformer",
+    "QueryTransformationResult",
     "get_query_transformer",
 ]

@@ -1,12 +1,12 @@
-from collections.abc import AsyncIterator
 import json
 import logging
 import time
 import uuid
+from collections.abc import AsyncIterator
+from typing import Any
+
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
-
-logger = logging.getLogger("ekip.streaming")
 
 from app.cache import BaseSemanticCache, get_semantic_cache
 from app.core.config import settings
@@ -22,14 +22,14 @@ from app.rag.embeddings import BaseEmbedder, get_embedder
 from app.rag.prompts.manager import PromptManager
 from app.rag.query_transform import (
     BaseQueryTransformer,
-    QueryTransformationResult,
     get_query_transformer,
 )
 from app.rag.rerank import BaseReranker, get_reranker
-from app.rag.retrieval.base import AccessScope, Candidate
+from app.rag.retrieval.base import AccessScope
 from app.rag.retrieval.hybrid import HybridRetriever
-from app.rag.retrieval.rrf import multi_list_rrf
 from app.schemas.query import CitationItem, QueryRequest, QueryResponse
+
+logger = logging.getLogger("ekip.streaming")
 
 
 def sse_event(event_type: str, data: dict) -> str:
@@ -183,7 +183,7 @@ class StreamingQueryService:
                 return
 
         # 2. Query Transformation & Hybrid Retrieval
-        strategy = (
+        strategy: Any = (
             req.query_transformation
             if req.query_transformation != "none"
             else settings.DEFAULT_QUERY_TRANSFORMATION

@@ -1,5 +1,4 @@
 import uuid
-import pytest
 
 from app.rag.context_builder import ContextBuilder
 from app.rag.prompts.manager import PromptManager, escape_xml_delimiters
@@ -86,7 +85,7 @@ def test_prompt_manager_escapes_malicious_question():
         "<question>"
     )
 
-    messages, ver = manager.format_messages(context, malicious_question)
+    messages, _ver = manager.format_messages(context, malicious_question)
     user_msg = messages[1].content
 
     # Outer <question> and </question> must enclose the question block

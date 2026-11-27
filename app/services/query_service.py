@@ -2,9 +2,9 @@ import asyncio
 import logging
 import time
 import uuid
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
 
-logger = logging.getLogger(__name__)
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cache import BaseSemanticCache, get_semantic_cache
 from app.core.config import settings
@@ -28,6 +28,8 @@ from app.rag.retrieval.base import AccessScope, Candidate
 from app.rag.retrieval.hybrid import HybridRetriever
 from app.rag.retrieval.rrf import multi_list_rrf
 from app.schemas.query import CitationItem, QueryRequest, QueryResponse
+
+logger = logging.getLogger(__name__)
 
 
 class QueryService:
@@ -79,7 +81,7 @@ class QueryService:
         req: QueryRequest,
         scope: AccessScope,
     ) -> tuple[list[Candidate], QueryTransformationResult]:
-        strategy = (
+        strategy: Any = (
             req.query_transformation
             if req.query_transformation != "none"
             else settings.DEFAULT_QUERY_TRANSFORMATION

@@ -1,6 +1,7 @@
 import asyncio
 import math
-from typing import Sequence
+from collections.abc import Sequence
+
 from fastembed.rerank.cross_encoder import TextCrossEncoder
 
 from app.rag.retrieval.base import Candidate

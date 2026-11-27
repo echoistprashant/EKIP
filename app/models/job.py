@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -59,14 +60,14 @@ class IngestionJob(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         nullable=False,
         index=True,
     )
     updated_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
     completed_at: Mapped[datetime | None] = mapped_column(

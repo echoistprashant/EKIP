@@ -44,6 +44,7 @@ async def ask_rag_stream(
     Streams source references, token-by-token generation, and final verified citations.
     """
     from fastapi.responses import StreamingResponse
+
     from app.services.streaming_service import StreamingQueryService
 
     service = StreamingQueryService(db)

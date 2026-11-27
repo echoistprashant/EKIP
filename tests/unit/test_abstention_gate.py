@@ -1,7 +1,10 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
+from app.evaluation.models import TriadEvaluationResult
+from app.llm.client import LLMResult, TokenUsage
 from app.models.user import User
 from app.rag.citations import CitationVerifier
 from app.rag.context_builder import ContextBuilder
@@ -9,8 +12,6 @@ from app.rag.prompts.manager import PromptManager
 from app.rag.retrieval.base import Candidate
 from app.schemas.query import QueryRequest
 from app.services.query_service import QueryService
-from app.llm.client import LLMResult, TokenUsage
-from app.evaluation.models import TriadEvaluationResult
 
 
 @pytest.fixture

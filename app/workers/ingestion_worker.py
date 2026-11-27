@@ -1,10 +1,10 @@
 import asyncio
 import logging
 import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chunk import Chunk
-from app.models.document import Document
 from app.rag.chunking.structural import StructuralChunker
 from app.rag.cleaning import document_cleaner
 from app.rag.embeddings.factory import get_embedder
@@ -77,7 +77,7 @@ async def process_document_pipeline(
                 embedding=emb,
                 embedding_model=embedder.model_name,
             )
-            for c, emb in zip(chunks_data, embeddings)
+            for c, emb in zip(chunks_data, embeddings, strict=False)
         ]
 
         # Step 6: Persist Chunks and update status

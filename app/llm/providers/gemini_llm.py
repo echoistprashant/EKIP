@@ -1,6 +1,7 @@
-from collections.abc import AsyncIterator
 import json
 import time
+from collections.abc import AsyncIterator
+
 import httpx
 from fastapi import HTTPException
 
@@ -103,8 +104,10 @@ class GeminiLLMClient:
         model, payload = self._build_payload(req)
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse&key={self.api_key}"
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            async with client.stream("POST", url, json=payload) as response:
+        async with (
+            httpx.AsyncClient(timeout=self.timeout) as client,
+            client.stream("POST", url, json=payload) as response,
+        ):
                 if response.status_code != 200:
                     err_text = await response.aread()
                     raise HTTPException(

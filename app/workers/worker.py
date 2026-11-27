@@ -1,16 +1,16 @@
 import asyncio
-from datetime import datetime, timezone
 import logging
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cache import get_semantic_cache
 from app.core.config import settings
 from app.models.chunk import Chunk
-from app.models.document import Document
 from app.models.job import IngestionJob
 from app.rag.chunking.structural import StructuralChunker
 from app.rag.cleaning import document_cleaner
@@ -119,12 +119,12 @@ class IngestionWorker:
                     embedding=emb,
                     embedding_model=embedder.model_name,
                 )
-                for c, emb in zip(chunks_data, embeddings)
+                for c, emb in zip(chunks_data, embeddings, strict=False)
             ]
             await chunks_repo.insert_chunks(db_chunks)
 
             # 7. Complete Job & Document
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             doc.status = "indexed"
             doc.error_code = None
 
@@ -148,7 +148,7 @@ class IngestionWorker:
 
         except Exception as e:
             await db.rollback()
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             retry_count = job_data.get("retry_count", 0)
 
             if retry_count < self.max_retries:
@@ -204,6 +204,7 @@ class IngestionWorker:
 async def run_ingestion_worker_loop() -> None:
     """Continuous background loop consuming from Redis Ingestion Queue."""
     import asyncio
+
     from app.db.session import AsyncSessionLocal
     worker = IngestionWorker()
     logger.info("Background ingestion queue worker loop active")

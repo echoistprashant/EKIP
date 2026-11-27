@@ -1,9 +1,11 @@
 import uuid
+
 import pytest
-from app.models.tenant import Tenant
+
+from app.models.chunk import Chunk
 from app.models.collection import Collection
 from app.models.document import Document
-from app.models.chunk import Chunk
+from app.models.tenant import Tenant
 from app.repositories.chunks_repo import ChunksRepository
 
 

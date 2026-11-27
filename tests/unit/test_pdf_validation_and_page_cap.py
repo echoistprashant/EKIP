@@ -1,9 +1,11 @@
 import io
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+
+import pytest
 from fastapi import HTTPException, UploadFile
 from pypdf import PdfWriter
-import pytest
+from starlette.datastructures import Headers
 
 from app.models.collection import Collection
 from app.models.user import User
@@ -48,7 +50,7 @@ async def test_ingestion_rejects_fake_pdf_magic_bytes():
     fake_pdf = UploadFile(
         filename="disguised.pdf",
         file=io.BytesIO(b"MALICIOUS_NON_PDF_PAYLOAD"),
-        headers={"content-type": "application/pdf"},
+        headers=Headers({"content-type": "application/pdf"}),
     )
 
     mock_db = AsyncMock()
@@ -87,7 +89,7 @@ async def test_ingestion_rejects_pdf_over_100_pages():
     upload = UploadFile(
         filename="oversized.pdf",
         file=io.BytesIO(pdf_101_pages),
-        headers={"content-type": "application/pdf"},
+        headers=Headers({"content-type": "application/pdf"}),
     )
 
     mock_db = AsyncMock()

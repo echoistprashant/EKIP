@@ -1,8 +1,8 @@
 import time
-from enum import Enum
+from enum import StrEnum
 
 
-class CircuitState(str, Enum):
+class CircuitState(StrEnum):
     CLOSED = "closed"        # Healthy, traffic flows normally
     OPEN = "open"            # Failing, requests blocked immediately (fail-fast)
     HALF_OPEN = "half_open"  # Testing recovery with a single probe request
@@ -10,7 +10,6 @@ class CircuitState(str, Enum):
 
 class CircuitBreakerOpenException(Exception):
     """Raised when an operation is attempted on an open circuit."""
-    pass
 
 
 class CircuitBreaker:

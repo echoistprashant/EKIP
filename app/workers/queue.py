@@ -1,8 +1,9 @@
 import abc
-from datetime import datetime, timezone
 import json
 import logging
+from datetime import UTC, datetime
 from typing import Any
+
 import redis.asyncio as aioredis
 
 from app.core.config import settings
@@ -103,7 +104,7 @@ class RedisIngestionQueue(BaseIngestionQueue):
         client = self._get_client()
         dlq_item = dict(job_data)
         dlq_item["dlq_error"] = error
-        dlq_item["dlq_at"] = datetime.now(timezone.utc).isoformat()
+        dlq_item["dlq_at"] = datetime.now(UTC).isoformat()
         serialized = json.dumps(dlq_item)
         await client.lpush(self.dlq_name, serialized)
         logger.error(
@@ -148,7 +149,7 @@ class InMemoryIngestionQueue(BaseIngestionQueue):
         import asyncio
         try:
             return await asyncio.wait_for(self._queue.get(), timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return None
 
     async def qsize(self) -> int:
@@ -157,14 +158,14 @@ class InMemoryIngestionQueue(BaseIngestionQueue):
     async def enqueue_dlq(self, job_data: dict[str, Any], error: str) -> None:
         dlq_item = dict(job_data)
         dlq_item["dlq_error"] = error
-        dlq_item["dlq_at"] = datetime.now(timezone.utc).isoformat()
+        dlq_item["dlq_at"] = datetime.now(UTC).isoformat()
         await self._dlq.put(dlq_item)
 
     async def dequeue_dlq(self, timeout: int = 1) -> dict[str, Any] | None:
         import asyncio
         try:
             return await asyncio.wait_for(self._dlq.get(), timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return None
 
     async def dlq_size(self) -> int:

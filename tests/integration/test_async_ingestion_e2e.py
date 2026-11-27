@@ -1,5 +1,6 @@
 import io
 import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -98,6 +99,7 @@ All asynchronous replication streams sync every 5 seconds.
             import asyncio
             await asyncio.sleep(0.1)
 
+        assert completed_job is not None
         assert completed_job["status"] == "completed"
         assert completed_job["stage"] == "completed"
         assert completed_job["progress"] == 100

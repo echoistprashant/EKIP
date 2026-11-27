@@ -1,9 +1,10 @@
-from datetime import datetime, timezone
 import hashlib
 import io
-from pathlib import Path
 import re
 import uuid
+from datetime import UTC, datetime
+from pathlib import Path
+
 from fastapi import HTTPException, UploadFile, status
 from pypdf import PdfReader
 from sqlalchemy import select
@@ -233,7 +234,7 @@ class IngestionService:
             db=self.db,
         )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         job.status = "completed"
         job.stage = "completed"
         job.progress = 100

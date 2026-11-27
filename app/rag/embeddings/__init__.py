@@ -5,7 +5,7 @@ from app.rag.embeddings.mock_embedder import MockEmbedder
 
 __all__ = [
     "BaseEmbedder",
-    "get_embedder",
     "FastEmbedEmbedder",
     "MockEmbedder",
+    "get_embedder",
 ]

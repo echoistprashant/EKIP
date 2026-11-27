@@ -1,20 +1,21 @@
 import asyncio
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from uuid import uuid4
+
+import structlog
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
-import structlog
 
+from app.api.v1.analytics import router as analytics_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.collections import router as collections_router
 from app.api.v1.documents import router as documents_router
-from app.api.v1.health import router as health_router
-from app.api.v1.query import router as query_router
 from app.api.v1.evaluation import router as evaluation_router
 from app.api.v1.feedback import router as feedback_router
-from app.api.v1.analytics import router as analytics_router
+from app.api.v1.health import router as health_router
+from app.api.v1.query import router as query_router
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.ui.dashboard_html import DASHBOARD_HTML
@@ -33,10 +34,8 @@ async def lifespan(app: FastAPI):
     yield
     if worker_task is not None:
         worker_task.cancel()
-        try:
+        with suppress(asyncio.CancelledError):
             await worker_task
-        except asyncio.CancelledError:
-            pass
 
 
 def create_app() -> FastAPI:

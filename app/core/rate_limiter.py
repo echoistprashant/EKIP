@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 import uuid
+
 import redis.asyncio as aioredis
 from fastapi import Depends, HTTPException, status
 
@@ -39,9 +40,8 @@ class RedisRateLimiter:
         except RuntimeError:
             current_loop = None
 
-        if self._client is not None:
-            if self._client_loop is not None and (self._client_loop.is_closed() or self._client_loop != current_loop):
-                self._client = None
+        if self._client is not None and self._client_loop is not None and (self._client_loop.is_closed() or self._client_loop != current_loop):
+            self._client = None
 
         if self._client is None:
             self._client = aioredis.from_url(

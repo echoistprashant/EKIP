@@ -4,6 +4,7 @@ import logging
 import secrets
 import uuid
 from typing import Any
+
 import redis.asyncio as aioredis
 
 from app.core.config import settings
@@ -27,9 +28,8 @@ class RefreshTokenManager:
         except RuntimeError:
             current_loop = None
 
-        if self._client is not None:
-            if self._client_loop is not None and (self._client_loop.is_closed() or self._client_loop != current_loop):
-                self._client = None
+        if self._client is not None and self._client_loop is not None and (self._client_loop.is_closed() or self._client_loop != current_loop):
+            self._client = None
 
         if self._client is None:
             self._client = aioredis.from_url(
@@ -120,16 +120,17 @@ class RefreshTokenManager:
             user_key = f"user_refresh_tokens:{user_id}"
             tokens = await client.smembers(user_key)
             for t in tokens:
-                await client.delete(f"refresh_token:{t}")
+                token_str = t.decode("utf-8") if isinstance(t, bytes) else str(t)
+                await client.delete(f"refresh_token:{token_str}")
                 count += 1
             await client.delete(user_key)
         except Exception as e:
             logger.warning(f"Redis revoke all failed, checking fallback store: {e}")
 
         uid_str = str(user_id)
-        tokens = self._user_tokens_fallback.pop(uid_str, set())
-        for t in tokens:
-            self._fallback_store.pop(t, None)
+        fallback_tokens = self._user_tokens_fallback.pop(uid_str, set())
+        for token_item in fallback_tokens:
+            self._fallback_store.pop(token_item, None)
             count += 1
 
         return count

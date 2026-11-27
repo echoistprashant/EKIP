@@ -1,4 +1,5 @@
 from typing import Protocol
+
 from app.rag.retrieval.base import Candidate
 
 

@@ -1,4 +1,5 @@
 import asyncio
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.rag.retrieval.base import AccessScope, Candidate

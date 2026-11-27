@@ -1,5 +1,6 @@
-from pathlib import Path
 import re
+from pathlib import Path
+
 from app.llm.client import ChatMessage
 
 PROMPTS_DIR = Path(__file__).parent

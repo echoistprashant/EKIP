@@ -1,4 +1,5 @@
 import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -97,7 +98,7 @@ async def test_auth_and_rbac_flow():
             json={"name": f"Engineering Docs {suffix}"},
         )
         assert create_col_res.status_code == 201
-        col_id = create_col_res.json()["id"]
+        create_col_res.json()["id"]
 
         # 7. TEST: Viewer in same tenant lists collections -> sees it
         list_res = await client.get("/api/v1/collections", headers=viewer_headers)

@@ -1,17 +1,8 @@
-import io
 import uuid
-import pytest
-from sqlalchemy import select
 
-from app.db.session import AsyncSessionLocal
-from app.models.chunk import Chunk
-from app.models.document import Document
-from app.models.job import IngestionJob
-from app.models.tenant import Tenant
-from app.models.user import User
-from app.models.collection import Collection
+import pytest
+
 from app.workers.queue import InMemoryIngestionQueue, RedisIngestionQueue
-from app.workers.worker import IngestionWorker
 
 
 @pytest.mark.asyncio

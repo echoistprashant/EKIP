@@ -1,6 +1,6 @@
 from app.rag.parsing.base import BaseParser, Element
-from app.rag.parsing.pdf import PDFParser
 from app.rag.parsing.markdown import MarkdownParser
+from app.rag.parsing.pdf import PDFParser
 
 
 class PlainTextParser:

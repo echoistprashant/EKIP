@@ -1,6 +1,6 @@
-from dataclasses import dataclass, field
-from typing import Any, Protocol
 import uuid
+from dataclasses import dataclass
+from typing import Protocol
 
 from app.schemas.query import QueryResponse
 

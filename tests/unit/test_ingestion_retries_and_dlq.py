@@ -1,11 +1,11 @@
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from app.models.document import Document
 from app.models.job import IngestionJob
-from app.workers.queue import InMemoryIngestionQueue, RedisIngestionQueue
+from app.workers.queue import InMemoryIngestionQueue
 from app.workers.worker import IngestionWorker
 
 
@@ -81,6 +81,7 @@ async def test_worker_retries_with_backoff_before_dlq():
 
         # Attempt 2: retry_count=1 -> should retry again and re-enqueue
         requeued_job = await q.dequeue()
+        assert requeued_job is not None
         with pytest.raises(FileNotFoundError):
             await worker.process_job(requeued_job, mock_db)
 
@@ -91,6 +92,7 @@ async def test_worker_retries_with_backoff_before_dlq():
 
         # Attempt 3: retry_count=2 (max_retries reached) -> should route to DLQ
         final_job = await q.dequeue()
+        assert final_job is not None
         with pytest.raises(FileNotFoundError):
             await worker.process_job(final_job, mock_db)
 

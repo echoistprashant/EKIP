@@ -1,5 +1,4 @@
 import uuid
-import pytest
 
 from app.rag.citations import CitationVerifier
 from app.rag.context_builder import ContextBuilder

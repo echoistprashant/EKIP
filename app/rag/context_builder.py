@@ -1,7 +1,7 @@
 import math
-from dataclasses import dataclass
-from typing import Sequence
 import uuid
+from collections.abc import Sequence
+from dataclasses import dataclass
 
 from app.rag.prompts.manager import escape_xml_delimiters
 from app.rag.retrieval.base import Candidate

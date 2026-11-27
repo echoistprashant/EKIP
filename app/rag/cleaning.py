@@ -1,5 +1,6 @@
 import re
 from collections import defaultdict
+
 from app.rag.parsing.base import Element
 
 
@@ -51,7 +52,7 @@ class DocumentCleaner:
 
             # Strip recurring boilerplate lines
             if boilerplate_lines:
-                lines = [l for l in text.splitlines() if l.strip() not in boilerplate_lines]
+                lines = [line for line in text.splitlines() if line.strip() not in boilerplate_lines]
                 text = "\n".join(lines)
 
             # Fix hyphenation: e.g. "con- \n tinue" -> "continue"

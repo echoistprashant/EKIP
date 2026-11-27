@@ -1,4 +1,5 @@
 import uuid
+
 import pytest
 
 from app.cache.base import compute_cosine_similarity
@@ -88,7 +89,7 @@ async def test_inmemory_exact_and_semantic_cache():
     )
     assert hit_semantic is not None
     assert hit_semantic.cache_type == "semantic"
-    assert hit_semantic.similarity >= 0.90
+    assert hit_semantic.similarity is not None and hit_semantic.similarity >= 0.90
     assert hit_semantic.matched_query == q1
 
     # 4. Semantic match miss (low cosine similarity < 0.90)
@@ -169,7 +170,7 @@ async def test_redis_semantic_cache_live():
     )
     assert hit_semantic is not None
     assert hit_semantic.cache_type == "semantic"
-    assert hit_semantic.similarity >= 0.90
+    assert hit_semantic.similarity is not None and hit_semantic.similarity >= 0.90
 
     # 4. Clean up
     await cache.clear()

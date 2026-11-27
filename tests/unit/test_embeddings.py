@@ -1,5 +1,7 @@
 import math
+
 import pytest
+
 from app.rag.embeddings.mock_embedder import MockEmbedder
 
 

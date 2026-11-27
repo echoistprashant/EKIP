@@ -1,5 +1,6 @@
-from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from app.models.user import User

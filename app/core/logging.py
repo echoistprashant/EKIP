@@ -1,5 +1,6 @@
 
 import logging
+from typing import Any
 
 import structlog
 
@@ -7,7 +8,7 @@ import structlog
 def configure_logging(log_level: str = "INFO") -> None:
     """Configure application logging in JSON format."""
 
-    shared_processors = [
+    shared_processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.TimeStamper(
             fmt="iso",

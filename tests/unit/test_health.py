@@ -1,7 +1,8 @@
 
 from unittest.mock import AsyncMock, patch
-from httpx import ASGITransport, AsyncClient
+
 import pytest
+from httpx import ASGITransport, AsyncClient
 
 from app.db.session import get_db
 from app.main import app

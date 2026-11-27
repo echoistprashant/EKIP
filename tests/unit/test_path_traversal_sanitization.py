@@ -1,10 +1,11 @@
 import io
-from pathlib import Path
 import tempfile
 import uuid
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi import UploadFile
+
 import pytest
+from fastapi import UploadFile
 
 from app.core.config import settings
 from app.models.collection import Collection

@@ -1,6 +1,7 @@
 import uuid
-from fastapi import HTTPException
+
 import pytest
+from fastapi import HTTPException
 
 from app.core.rate_limiter import RedisRateLimiter
 
@@ -31,7 +32,7 @@ async def test_rate_limiter_blocks_over_limit_with_retry_after():
         await limiter.check("test_block", unique_user, max_requests=3, window_seconds=60)
 
     assert exc.value.status_code == 429
-    assert "Retry-After" in exc.value.headers
+    assert exc.value.headers is not None and "Retry-After" in exc.value.headers
     retry_after = int(exc.value.headers["Retry-After"])
     assert 1 <= retry_after <= 60
 
@@ -50,4 +51,4 @@ async def test_rate_limiter_in_memory_fallback():
         await limiter.check("test_fallback", unique_user, max_requests=2, window_seconds=10)
 
     assert exc.value.status_code == 429
-    assert "Retry-After" in exc.value.headers
+    assert exc.value.headers is not None and "Retry-After" in exc.value.headers

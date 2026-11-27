@@ -1,9 +1,9 @@
 from functools import lru_cache
 
-from app.core.config import settings
 from app.cache.base import BaseSemanticCache, CacheHit
 from app.cache.inmemory_cache import InMemorySemanticCache
 from app.cache.redis_cache import RedisSemanticCache
+from app.core.config import settings
 
 
 @lru_cache
@@ -30,7 +30,7 @@ def get_semantic_cache() -> BaseSemanticCache | None:
 __all__ = [
     "BaseSemanticCache",
     "CacheHit",
-    "RedisSemanticCache",
     "InMemorySemanticCache",
+    "RedisSemanticCache",
     "get_semantic_cache",
 ]

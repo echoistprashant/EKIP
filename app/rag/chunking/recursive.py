@@ -1,4 +1,5 @@
 import math
+
 from app.rag.chunking.base import ChunkData
 from app.rag.parsing.base import Element
 
@@ -30,7 +31,7 @@ def split_text_recursive(text: str, max_tokens: int, overlap_tokens: int) -> lis
                     chunk_str = sep.join(current_chunk).strip()
                     if chunk_str:
                         chunks.append(chunk_str)
-                    
+
                     # Retain overlap from end of current chunk
                     current_chunk = current_chunk[-1:] if len(current_chunk) > 1 else []
                     current_tokens = sum(estimate_tokens(p) for p in current_chunk)

@@ -1,6 +1,6 @@
 import pytest
 
-from app.llm.client import ChatMessage, LLMRequest, StreamChunk
+from app.llm.client import ChatMessage, LLMRequest
 from app.llm.providers.mock_llm import MockLLMClient
 from app.llm.router import ResilientLLMRouter
 from app.services.streaming_service import sse_event

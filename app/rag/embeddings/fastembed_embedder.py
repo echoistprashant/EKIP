@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any
+
 from fastembed import TextEmbedding
 
 
@@ -30,7 +30,7 @@ class FastEmbedEmbedder:
         model = self._get_model()
         # query_embed applies specific query prefix optimizations (e.g. for BGE)
         embeddings_generator = model.query_embed([text])
-        return list(embeddings_generator)[0].tolist()
+        return next(iter(embeddings_generator)).tolist()
 
     async def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Run CPU-bound embedding computation in separate thread to prevent event loop blocking."""

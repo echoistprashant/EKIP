@@ -1,7 +1,7 @@
 import hashlib
 import time
-from typing import Any
 import uuid
+from typing import Any
 
 from app.cache.base import (
     CacheHit,

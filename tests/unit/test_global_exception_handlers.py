@@ -1,8 +1,8 @@
 import uuid
+
 import pytest
 from fastapi import APIRouter, HTTPException
 from httpx import ASGITransport, AsyncClient
-import structlog
 
 from app.main import create_app
 

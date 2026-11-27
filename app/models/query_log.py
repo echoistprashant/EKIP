@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -29,7 +30,7 @@ class QueryLog(Base):
     answer_relevance_score: Mapped[float | None] = mapped_column(Numeric(4, 3), nullable=True)
     hallucination_flag: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
     citations = relationship("QueryCitation", back_populates="query_log", cascade="all, delete-orphan")

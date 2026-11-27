@@ -1,5 +1,5 @@
-from collections.abc import Callable
 import uuid
+from collections.abc import Callable
 
 import jwt
 from fastapi import Depends, HTTPException, status
