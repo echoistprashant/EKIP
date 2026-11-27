@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Sequence
 import uuid
 
+from app.rag.prompts.manager import escape_xml_delimiters
 from app.rag.retrieval.base import Candidate
 
 
@@ -113,11 +114,13 @@ class ContextBuilder:
                 else:
                     page_info = f' page="{candidate.page_start}"'
 
-            section_attr = f' section="{candidate.section_path}"' if candidate.section_path else ""
+            escaped_section = escape_xml_delimiters(candidate.section_path) if candidate.section_path else ""
+            section_attr = f' section="{escaped_section}"' if escaped_section else ""
+            escaped_content = escape_xml_delimiters(candidate.content.strip())
 
             block = (
                 f'<source id="{idx}" doc_id="{candidate.document_id}"{section_attr}{page_info}>\n'
-                f"{candidate.content.strip()}\n"
+                f"{escaped_content}\n"
                 f"</source>"
             )
             context_blocks.append(block)

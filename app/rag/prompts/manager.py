@@ -1,7 +1,26 @@
 from pathlib import Path
+import re
 from app.llm.client import ChatMessage
 
 PROMPTS_DIR = Path(__file__).parent
+
+XML_DELIMITER_PATTERN = re.compile(
+    r"</?\s*(?:context|source|question)(?:\s+[^>]*|\s*)>",
+    re.IGNORECASE,
+)
+
+
+def escape_xml_delimiters(text: str) -> str:
+    """Escapes XML delimiter tags (<context>, <source>, <question> and their closing tags)
+    in document text and user questions to prevent prompt injection breakouts.
+    """
+    if not text:
+        return text
+    return XML_DELIMITER_PATTERN.sub(
+        lambda m: m.group(0).replace("<", "&lt;").replace(">", "&gt;"),
+        text,
+    )
+
 
 ABSTENTION_PHRASES = [
     "i do not have enough information",
@@ -45,12 +64,13 @@ class PromptManager:
         ver = version or self.default_version
         system_content = self.get_system_prompt(ver)
 
+        clean_question = escape_xml_delimiters(question.strip())
         user_content = (
             f"<context>\n"
             f"{context_text}\n"
             f"</context>\n\n"
             f"<question>\n"
-            f"{question.strip()}\n"
+            f"{clean_question}\n"
             f"</question>"
         )
 
