@@ -1,6 +1,6 @@
 import io
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import HTTPException, UploadFile
 import pytest
 
@@ -97,10 +97,15 @@ async def test_upload_within_limit_success():
     service.docs_repo = mock_docs_repo
     user = User(id=uuid.uuid4(), tenant_id=tenant_id, email="u@test.com", role="admin")
 
-    doc, _, _ = await service.ingest_file(
-        file=file,
-        collection_id=collection_id,
-        user=user,
-        async_mode=True,
-    )
-    assert doc is not None
+    with patch("app.services.ingestion_service.get_ingestion_queue") as mock_get_q:
+        mock_queue = AsyncMock()
+        mock_get_q.return_value = mock_queue
+
+        doc, _, _ = await service.ingest_file(
+            file=file,
+            collection_id=collection_id,
+            user=user,
+            async_mode=True,
+        )
+        assert doc is not None
+        assert mock_queue.enqueue.called

@@ -34,12 +34,24 @@ class RedisSemanticCache:
         self._client: aioredis.Redis | None = None
 
     def _get_client(self) -> aioredis.Redis:
+        import asyncio
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if self._client is not None:
+            client_loop = getattr(self, "_client_loop", None)
+            if client_loop is not None and (client_loop.is_closed() or client_loop != current_loop):
+                self._client = None
+
         if self._client is None:
             self._client = aioredis.from_url(
                 self.redis_url,
                 decode_responses=True,
                 socket_timeout=2.0,
             )
+            self._client_loop = current_loop
         return self._client
 
     def _hash_query(self, query: str) -> str:

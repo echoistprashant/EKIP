@@ -2,7 +2,7 @@ import io
 from pathlib import Path
 import tempfile
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import UploadFile
 import pytest
 
@@ -68,36 +68,39 @@ async def test_ingest_file_staged_path_safety():
             service.cols_repo = mock_cols_repo
             service.docs_repo = mock_docs_repo
 
-            # Test with ../../etc/passwd
-            upload1 = UploadFile(
-                filename="../../etc/passwd",
-                file=io.BytesIO(b"dummy file content for traversal test"),
-            )
-            doc1, _, _ = await service.ingest_file(
-                file=upload1,
-                collection_id=collection_id,
-                user=user,
-                async_mode=True,
-            )
+            with patch("app.services.ingestion_service.get_ingestion_queue") as mock_get_q:
+                mock_get_q.return_value = AsyncMock()
 
-            expected_dir = Path(temp_dir) / str(tenant_id)
-            assert Path(doc1.storage_key).resolve().is_relative_to(expected_dir.resolve())
-            assert Path(doc1.storage_key).name.endswith("_passwd")
+                # Test with ../../etc/passwd
+                upload1 = UploadFile(
+                    filename="../../etc/passwd",
+                    file=io.BytesIO(b"dummy file content for traversal test"),
+                )
+                doc1, _, _ = await service.ingest_file(
+                    file=upload1,
+                    collection_id=collection_id,
+                    user=user,
+                    async_mode=True,
+                )
 
-            # Test with ..\..\x.bat
-            upload2 = UploadFile(
-                filename=r"..\..\x.bat",
-                file=io.BytesIO(b"echo batch file content"),
-            )
-            doc2, _, _ = await service.ingest_file(
-                file=upload2,
-                collection_id=collection_id,
-                user=user,
-                async_mode=True,
-            )
+                expected_dir = Path(temp_dir) / str(tenant_id)
+                assert Path(doc1.storage_key).resolve().is_relative_to(expected_dir.resolve())
+                assert Path(doc1.storage_key).name.endswith("_passwd")
 
-            assert Path(doc2.storage_key).resolve().is_relative_to(expected_dir.resolve())
-            assert Path(doc2.storage_key).name.endswith("_x.bat")
+                # Test with ..\..\x.bat
+                upload2 = UploadFile(
+                    filename=r"..\..\x.bat",
+                    file=io.BytesIO(b"echo batch file content"),
+                )
+                doc2, _, _ = await service.ingest_file(
+                    file=upload2,
+                    collection_id=collection_id,
+                    user=user,
+                    async_mode=True,
+                )
+
+                assert Path(doc2.storage_key).resolve().is_relative_to(expected_dir.resolve())
+                assert Path(doc2.storage_key).name.endswith("_x.bat")
 
         finally:
             settings.UPLOAD_DIR = orig_upload_dir
