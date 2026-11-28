@@ -115,6 +115,13 @@ class StreamingQueryService:
             if cache_hit is not None:
                 hit_latency = int((time.perf_counter() - start_time) * 1000)
                 cached = cache_hit.response
+                cached_abstained = bool(getattr(cached, "abstained", False))
+                raw_cached_groundedness = getattr(cached, "groundedness_score", None)
+                cached_groundedness: float | None = (
+                    None
+                    if (cached_abstained or not cached.citations)
+                    else raw_cached_groundedness
+                )
 
                 # Persist cache-hit telemetry log to query_logs
                 log_record = QueryLog(
@@ -124,7 +131,7 @@ class StreamingQueryService:
                     question=req.query,
                     rewritten_query=getattr(cached, "rewritten_query", None) or req.query,
                     answer=cached.answer,
-                    abstained=cached.abstained,
+                    abstained=cached_abstained,
                     trace_id=trace_id,
                     prompt_version=getattr(cached, "prompt_version", "v1.0") or "v1.0",
                     model=f"{getattr(cached, 'model', None) or settings.LLM_MODEL}-cache",
@@ -132,7 +139,7 @@ class StreamingQueryService:
                     output_tokens=0,
                     cost_usd=0.0,
                     latency_ms=hit_latency,
-                    groundedness_score=getattr(cached, "groundedness_score", 1.0) or 1.0,
+                    groundedness_score=cached_groundedness,
                     context_relevance_score=1.0,
                     answer_relevance_score=1.0,
                     hallucination_flag=getattr(cached, "hallucination_warning", False) or False,
@@ -173,11 +180,12 @@ class StreamingQueryService:
                     "cache_type": cache_hit.cache_type,
                     "similarity": cache_hit.similarity,
                     "citations": [c.model_dump() for c in cached.citations],
+                    "abstained": cached_abstained,
                     "latency_ms": hit_latency,
                     "input_tokens": 0,
                     "output_tokens": 0,
                     "cost_usd": 0.0,
-                    "groundedness_score": getattr(cached, "groundedness_score", 1.0) or 1.0,
+                    "groundedness_score": cached_groundedness,
                     "hallucination_warning": getattr(cached, "hallucination_warning", False) or False,
                 })
                 return
@@ -233,11 +241,18 @@ class StreamingQueryService:
                 output_tokens=0,
                 cost_usd=0.0,
                 latency_ms=latency_ms,
+                groundedness_score=None,
             )
             self.db.add(log_record)
             await self.db.commit()
 
-            yield sse_event("abstention", {"message": msg, "query_id": str(query_id)})
+            yield sse_event("abstention", {
+                "message": msg,
+                "query_id": str(query_id),
+                "abstained": True,
+                "groundedness_score": None,
+                "latency_ms": latency_ms,
+            })
             return
 
         # 4. Reranking & Compression
@@ -322,13 +337,18 @@ class StreamingQueryService:
         completion_tokens = token_usage.completion_tokens if token_usage else len(full_answer.split())
 
         # 8. Run RAG Triad Evaluation & Hallucination Guardrails
+        groundedness_score: float | None
         if not is_abstained:
             eval_result = await self.evaluator.evaluate(
                 query=req.query,
                 context=built_context.context_text,
                 answer=full_answer,
             )
-            groundedness_score = eval_result.groundedness
+            claim_count = int(eval_result.details.get("claim_count", 0))
+            has_claims = claim_count > 0 if "claim_count" in eval_result.details else eval_result.groundedness is not None
+            groundedness_score = (
+                None if (not citations or not has_claims) else eval_result.groundedness
+            )
             context_relevance_score = eval_result.context_relevance
             answer_relevance_score = eval_result.answer_relevance
             hallucination_flag = eval_result.hallucination_warning or citation_failed
@@ -342,7 +362,7 @@ class StreamingQueryService:
                     full_answer,
                 )
         else:
-            groundedness_score = 1.0
+            groundedness_score = None
             context_relevance_score = 0.0
             answer_relevance_score = 1.0
             hallucination_flag = False
@@ -415,6 +435,7 @@ class StreamingQueryService:
             "query_id": str(query_id),
             "cached": False,
             "citations": [c.model_dump() for c in citations],
+            "abstained": is_abstained,
             "latency_ms": latency_ms,
             "input_tokens": prompt_tokens,
             "output_tokens": completion_tokens,

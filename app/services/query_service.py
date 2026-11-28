@@ -176,6 +176,11 @@ class QueryService:
 
             if cache_hit is not None:
                 hit_latency = int((time.perf_counter() - start_time) * 1000)
+                cached_groundedness = (
+                    None
+                    if (cache_hit.response.abstained or not cache_hit.response.citations)
+                    else cache_hit.response.groundedness_score
+                )
                 cached_res = QueryResponse(
                     query=req.query,
                     rewritten_query=cache_hit.response.rewritten_query,
@@ -193,7 +198,7 @@ class QueryService:
                     output_tokens=0,
                     cost_usd=0.0,
                     latency_ms=hit_latency,
-                    groundedness_score=cache_hit.response.groundedness_score,
+                    groundedness_score=cached_groundedness,
                     hallucination_warning=cache_hit.response.hallucination_warning,
                     query_id=query_id,
                 )
@@ -214,7 +219,7 @@ class QueryService:
                     output_tokens=0,
                     cost_usd=0.0,
                     latency_ms=hit_latency,
-                    groundedness_score=cached_res.groundedness_score,
+                    groundedness_score=cached_groundedness,
                     context_relevance_score=1.0,
                     answer_relevance_score=1.0,
                     hallucination_flag=cached_res.hallucination_warning,
@@ -257,7 +262,7 @@ class QueryService:
                 output_tokens=0,
                 cost_usd=0.0,
                 latency_ms=latency_ms,
-                groundedness_score=1.0,
+                groundedness_score=None,
                 context_relevance_score=0.0,
                 answer_relevance_score=1.0,
                 hallucination_flag=False,
@@ -279,7 +284,7 @@ class QueryService:
                 output_tokens=0,
                 cost_usd=0.0,
                 latency_ms=latency_ms,
-                groundedness_score=1.0,
+                groundedness_score=None,
                 hallucination_warning=False,
                 query_id=query_id,
             )
@@ -362,6 +367,15 @@ class QueryService:
 
         latency_ms = int((time.perf_counter() - start_time) * 1000)
 
+        # Groundedness score is null when abstained, zero citations, or zero claims
+        claim_count = int(eval_result.details.get("claim_count", 0))
+        has_claims = claim_count > 0 if "claim_count" in eval_result.details else eval_result.groundedness is not None
+        effective_groundedness: float | None = (
+            None
+            if (is_abstained or not citations or not has_claims)
+            else eval_result.groundedness
+        )
+
         # 13. Persist telemetry to query_logs and query_citations
         log_record = QueryLog(
             id=query_id,
@@ -378,7 +392,7 @@ class QueryService:
             output_tokens=llm_result.usage.completion_tokens,
             cost_usd=llm_result.cost_usd,
             latency_ms=latency_ms,
-            groundedness_score=eval_result.groundedness,
+            groundedness_score=effective_groundedness,
             context_relevance_score=eval_result.context_relevance,
             answer_relevance_score=eval_result.answer_relevance,
             hallucination_flag=eval_result.hallucination_warning or citation_failed,
@@ -411,7 +425,7 @@ class QueryService:
             output_tokens=llm_result.usage.completion_tokens,
             cost_usd=round(float(llm_result.cost_usd), 6),
             latency_ms=latency_ms,
-            groundedness_score=eval_result.groundedness,
+            groundedness_score=effective_groundedness,
             hallucination_warning=eval_result.hallucination_warning or citation_failed,
             query_id=query_id,
         )

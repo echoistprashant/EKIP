@@ -80,29 +80,31 @@ class RAGTriadEvaluator:
         score = matched / len(query_kw)
         return min(1.0, max(0.0, round(score, 3)))
 
-    def evaluate_groundedness(self, answer: str, context: str) -> tuple[float, list[str]]:
+    def _evaluate_groundedness_with_claims(self, answer: str, context: str) -> tuple[float | None, list[str], int]:
         """
         Decomposes answer into sentences and verifies that each claim
         has lexical grounding in the provided context.
+        Returns (groundedness_score_or_none, unsupported_claims, claim_count).
         """
-        # If model abstained, it is 100% faithful / grounded (0 hallucination)
+        # Abstentions make zero factual claims -> groundedness score is not applicable (None)
         if any(marker in answer.lower() for marker in ABSTENTION_MARKERS):
-            return 1.0, []
+            return None, [], 0
 
         sentences = self._split_sentences(answer)
         if not sentences:
-            return 1.0, []
+            return None, [], 0
 
         context_lower = context.lower()
         unsupported: list[str] = []
         grounded_count = 0
+        claim_count = 0
 
         for sent in sentences:
             sent_kw = self._extract_keywords(sent)
             if not sent_kw:
-                grounded_count += 1
                 continue
 
+            claim_count += 1
             # Check keyword support ratio in context
             matched_kw = sum(1 for kw in sent_kw if kw in context_lower)
             support_ratio = matched_kw / len(sent_kw)
@@ -113,8 +115,20 @@ class RAGTriadEvaluator:
             else:
                 unsupported.append(sent)
 
-        score = grounded_count / len(sentences)
-        return min(1.0, max(0.0, round(score, 3))), unsupported
+        if claim_count == 0:
+            return None, [], 0
+
+        score = grounded_count / claim_count
+        return min(1.0, max(0.0, round(score, 3))), unsupported, claim_count
+
+    def evaluate_groundedness(self, answer: str, context: str) -> tuple[float | None, list[str]]:
+        """
+        Decomposes answer into sentences and verifies that each claim
+        has lexical grounding in the provided context.
+        Returns None when the answer abstains or contains zero claims.
+        """
+        score, unsupported, _ = self._evaluate_groundedness_with_claims(answer, context)
+        return score, unsupported
 
     def evaluate_answer_relevance(self, query: str, answer: str) -> float:
         """Evaluates if the answer addresses the query."""
@@ -145,16 +159,19 @@ class RAGTriadEvaluator:
         Applies guardrails for hallucination detection.
         """
         ctx_rel = self.evaluate_context_relevance(query, context)
-        groundedness, unsupported = self.evaluate_groundedness(answer, context)
+        groundedness, unsupported, claim_count = self._evaluate_groundedness_with_claims(answer, context)
         ans_rel = self.evaluate_answer_relevance(query, answer)
 
-        # Composite RAG Triad score
-        composite = round((ctx_rel + groundedness + ans_rel) / 3.0, 3)
+        # Composite RAG Triad score (exclude null groundedness when zero claims/abstained)
+        if groundedness is None:
+            composite = round((ctx_rel + ans_rel) / 2.0, 3)
+        else:
+            composite = round((ctx_rel + groundedness + ans_rel) / 3.0, 3)
 
         # Guardrail checks
-        hallucination_warning = groundedness < self.min_groundedness_threshold
+        hallucination_warning = groundedness is not None and groundedness < self.min_groundedness_threshold
         passed_guardrails = (
-            groundedness >= self.min_groundedness_threshold
+            (groundedness is None or groundedness >= self.min_groundedness_threshold)
             and ans_rel >= self.min_answer_relevance_threshold
         )
 
@@ -176,5 +193,6 @@ class RAGTriadEvaluator:
             details={
                 "unsupported_claim_count": len(unsupported),
                 "sentence_count": len(self._split_sentences(answer)),
+                "claim_count": claim_count,
             },
         )

@@ -14,7 +14,7 @@ class EvaluationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     context_relevance: float = Field(..., ge=0.0, le=1.0, description="RAG Triad: Context Relevance score.")
-    groundedness: float = Field(..., ge=0.0, le=1.0, description="RAG Triad: Groundedness / Faithfulness score.")
+    groundedness: float | None = Field(default=None, ge=0.0, le=1.0, description="RAG Triad: Groundedness / Faithfulness score (null when abstained or zero claims).")
     answer_relevance: float = Field(..., ge=0.0, le=1.0, description="RAG Triad: Answer Relevance score.")
     rag_triad_score: float = Field(..., ge=0.0, le=1.0, description="Composite average of Triad scores.")
     passed_guardrails: bool = Field(..., description="Whether the response passed safety thresholds.")
@@ -27,7 +27,7 @@ class EvaluationResponse(BaseModel):
 class TriadEvaluationResult:
     """Internal evaluation result container."""
     context_relevance: float
-    groundedness: float
+    groundedness: float | None
     answer_relevance: float
     rag_triad_score: float
     passed_guardrails: bool

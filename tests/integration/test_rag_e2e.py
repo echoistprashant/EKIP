@@ -190,6 +190,7 @@ All communication must occur on the dedicated war-room Slack channel.
         assert abstain_res.status_code == 200
         abstain_data = abstain_res.json()
         assert abstain_data["abstained"] is True
+        assert abstain_data["groundedness_score"] is None
         assert len(abstain_data["citations"]) == 0
         assert "not have enough information" in abstain_data["answer"]
 
@@ -201,6 +202,7 @@ All communication must occur on the dedicated war-room Slack channel.
             abstain_log = result.scalar_one_or_none()
             assert abstain_log is not None
             assert abstain_log.abstained is True
+            assert abstain_log.groundedness_score is None
 
         # 6. Multi-Tenant Isolation Test: Tenant B asking about Tenant A's document
         email_b = f"admin_{suffix}@enterprise-b.com"

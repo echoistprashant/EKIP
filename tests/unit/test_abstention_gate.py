@@ -88,6 +88,7 @@ async def test_abstention_gate_on_citation_verification_failure(mock_user, caplo
 
     # Must return abstention answer instead of ungrounded text
     assert response.abstained is True
+    assert response.groundedness_score is None
     assert "not have enough information" in response.answer
     assert len(response.citations) == 0
     assert response.hallucination_warning is True
@@ -146,6 +147,7 @@ async def test_abstention_gate_on_hallucination_warning(mock_user, caplog):
 
     # Must return abstention answer
     assert response.abstained is True
+    assert response.groundedness_score is None
     assert "not have enough information" in response.answer
     assert len(response.citations) == 0
     assert response.hallucination_warning is True

@@ -20,6 +20,7 @@ async def test_rag_triad_grounded_answer():
     result = await evaluator.evaluate(query=query, context=context, answer=answer)
 
     assert result.context_relevance > 0.6
+    assert result.groundedness is not None
     assert result.groundedness >= 0.8
     assert result.answer_relevance > 0.5
     assert result.rag_triad_score > 0.6
@@ -42,6 +43,7 @@ async def test_rag_triad_hallucination_detection():
 
     result = await evaluator.evaluate(query=query, context=context, answer=answer)
 
+    assert result.groundedness is not None
     assert result.groundedness < 0.50
     assert result.hallucination_warning is True
     assert result.passed_guardrails is False
@@ -58,11 +60,25 @@ async def test_rag_triad_abstention_handling():
 
     result = await evaluator.evaluate(query=query, context=context, answer=answer)
 
-    # When abstaining, the model correctly refused rather than hallucinating
-    assert result.groundedness == 1.0
+    # Abstaining yields null groundedness rather than misleading 100%
+    assert result.groundedness is None
     assert result.answer_relevance == 1.0
     assert result.hallucination_warning is False
     assert result.passed_guardrails is True
+    assert result.details["claim_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_rag_triad_zero_claims_returns_null_groundedness():
+    evaluator = RAGTriadEvaluator()
+    query = "Is it active?"
+    context = "The enterprise pipeline is active across regions."
+
+    for answer in ("", "OK.", "It is to be.", "..."):
+        result = await evaluator.evaluate(query=query, context=context, answer=answer)
+        assert result.groundedness is None
+        assert result.details["claim_count"] == 0
+        assert result.hallucination_warning is False
 
 
 @pytest.mark.asyncio

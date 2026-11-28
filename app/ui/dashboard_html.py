@@ -214,8 +214,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             <h2 class="text-base sm:text-lg font-bold text-slate-900">Knowledge Ingestion & Queue</h2>
             <p class="text-xs text-slate-500 font-medium mt-0.5">Upload enterprise documents into isolated collections with structural chunking and async background queues.</p>
           </div>
-          <button onclick="openCreateCollectionModal()" class="self-start sm:self-auto px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm flex items-center gap-2 transition">
-            <i class="fa-solid fa-plus text-[10px]"></i> New Collection
+          <button id="new-collection-btn" type="button" onclick="openCreateCollectionModal()" class="relative z-10 cursor-pointer self-start sm:self-auto px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-sm flex items-center gap-2 transition">
+            <i class="fa-solid fa-plus text-[10px] pointer-events-none"></i><span class="pointer-events-none">New Collection</span>
           </button>
         </div>
 
@@ -469,7 +469,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   </div>
 
   <!-- CREATE COLLECTION MODAL -->
-  <div id="collection-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="collection-modal" onclick="if (event.target === this) closeCreateCollectionModal()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
     <div class="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
       <div class="flex items-center justify-between">
         <h3 class="text-sm font-bold text-slate-900">Create Knowledge Collection</h3>
@@ -566,6 +566,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     }
 
     function switchTab(tabId) {
+      if (typeof toggleChatGPTDropdown === 'function') {
+        toggleChatGPTDropdown(false);
+      }
       ['chat', 'documents', 'analytics'].forEach(tab => {
         const view = document.getElementById(`view-${tab}`);
         const btn = document.getElementById(`tab-btn-${tab}`);
@@ -573,6 +576,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         if (tab === tabId) {
           view.classList.remove('hidden');
           if (tab === 'chat') view.classList.add('flex');
+          view.scrollTop = 0;
           if (btn) btn.className = 'tab-btn px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 bg-white text-slate-900 shadow-sm flex items-center gap-2';
           if (mobileBtn) mobileBtn.className = 'flex-1 flex flex-col items-center gap-1 text-[10px] font-bold text-brand-600 transition';
         } else {
@@ -795,8 +799,20 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
     }
 
-    function openCreateCollectionModal() { document.getElementById('collection-modal').classList.remove('hidden'); }
-    function closeCreateCollectionModal() { document.getElementById('collection-modal').classList.add('hidden'); }
+    function openCreateCollectionModal() {
+      const modal = document.getElementById('collection-modal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      const firstInput = modal.querySelector('input');
+      if (firstInput) firstInput.focus();
+    }
+    function closeCreateCollectionModal() {
+      const modal = document.getElementById('collection-modal');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
 
     async function handleCreateCollection(e) {
       e.preventDefault();
@@ -863,50 +879,106 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             body: JSON.stringify({ query, collection_ids: [collectionId], query_transformation: strategy, rerank, compress_context: compress })
           });
 
+          if (response.status === 401) {
+            handleUnauthorized('Session expired. Please sign in again.');
+            renderAssistantError(assistantMessageId, 'Session expired. Please sign in again.', 401);
+            return;
+          }
+          if (!response.ok) {
+            const errMsg = await extractApiErrorMessage(response);
+            renderAssistantError(assistantMessageId, errMsg, response.status);
+            return;
+          }
+          if (!response.body) {
+            renderAssistantError(assistantMessageId, 'Streaming response body was unavailable.');
+            return;
+          }
+
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
+          let sseBuffer = '';
           let currentEvent = null;
           let answerText = '';
           let sources = [];
+          let finalized = false;
+
+          const processSseLine = (rawLine) => {
+            const line = rawLine.replace(/\\r$/, '');
+            if (line === '') {
+              currentEvent = null;
+              return;
+            }
+            if (line.startsWith('event:')) {
+              currentEvent = line.slice(6).trim();
+            } else if (line.startsWith('data:')) {
+              const dataStr = line.slice(5).trim();
+              if (currentEvent === 'sources') {
+                try {
+                  const parsed = JSON.parse(dataStr);
+                  sources = Array.isArray(parsed) ? parsed : (Array.isArray(parsed && parsed.sources) ? parsed.sources : []);
+                } catch (_) {}
+              } else if (currentEvent === 'token') {
+                let tokenText = dataStr;
+                try {
+                  const parsed = JSON.parse(dataStr);
+                  if (parsed && parsed.text !== undefined) {
+                    tokenText = parsed.text;
+                  }
+                } catch (_) {}
+                answerText += tokenText;
+                updateAssistantText(assistantMessageId, answerText);
+              } else if (currentEvent === 'abstention') {
+                let absData = {};
+                try { absData = JSON.parse(dataStr) || {}; } catch (_) {}
+                answerText = absData.message || 'I do not have enough information in the provided documents to answer this question.';
+                finalized = true;
+                finalizeAssistantMessage(assistantMessageId, answerText, [], {
+                  abstained: true,
+                  groundedness_score: null,
+                  latency_ms: absData.latency_ms || 0
+                });
+              } else if (currentEvent === 'error') {
+                let errData = {};
+                try { errData = JSON.parse(dataStr) || {}; } catch (_) {}
+                finalized = true;
+                renderAssistantError(assistantMessageId, errData.detail || errData.message || dataStr || 'Streaming error occurred.');
+              } else if (currentEvent === 'done') {
+                try {
+                  const doneMeta = JSON.parse(dataStr) || {};
+                  const finalCitations = Array.isArray(doneMeta.citations) ? doneMeta.citations : sources;
+                  finalized = true;
+                  finalizeAssistantMessage(assistantMessageId, answerText, finalCitations, doneMeta);
+                } catch (_) {}
+              }
+            }
+          };
 
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\\n');
-
-            for (const line of lines) {
-              if (line.startsWith('event: ')) {
-                currentEvent = line.replace('event: ', '').trim();
-              } else if (line.startsWith('data: ')) {
-                const dataStr = line.replace('data: ', '').trim();
-                if (currentEvent === 'sources') {
-                  try { sources = JSON.parse(dataStr); } catch (_) {}
-                } else if (currentEvent === 'token') {
-                  let tokenText = dataStr;
-                  try {
-                    const parsed = JSON.parse(dataStr);
-                    if (parsed && parsed.text !== undefined) {
-                      tokenText = parsed.text;
-                    }
-                  } catch (_) {}
-                  answerText += tokenText;
-                  updateAssistantText(assistantMessageId, answerText);
-                } else if (currentEvent === 'abstention') {
-                  try {
-                    const absData = JSON.parse(dataStr);
-                    answerText = absData.message || 'I do not have enough information in the provided documents to answer this question.';
-                  } catch (_) {
-                    answerText = 'I do not have enough information in the provided documents to answer this question.';
-                  }
-                  finalizeAssistantMessage(assistantMessageId, answerText, [], { abstained: true, groundedness_score: 1.0 });
-                } else if (currentEvent === 'done') {
-                  try {
-                    const doneMeta = JSON.parse(dataStr);
-                    finalizeAssistantMessage(assistantMessageId, answerText, sources, doneMeta);
-                  } catch (_) {}
+            if (value) {
+              sseBuffer += decoder.decode(value, { stream: !done });
+              const lines = sseBuffer.split('\\n');
+              sseBuffer = done ? '' : (lines.pop() || '');
+              for (const line of lines) {
+                processSseLine(line);
+              }
+            }
+            if (done) {
+              sseBuffer += decoder.decode();
+              if (sseBuffer.trim()) {
+                for (const line of sseBuffer.split('\\n')) {
+                  processSseLine(line);
                 }
               }
+              break;
+            }
+          }
+
+          if (!finalized) {
+            if (answerText) {
+              finalizeAssistantMessage(assistantMessageId, answerText, sources, { citations: sources });
+            } else {
+              renderAssistantError(assistantMessageId, 'No response received from streaming server.');
             }
           }
         } else {
@@ -915,11 +987,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
             body: JSON.stringify({ query, collection_ids: [collectionId], query_transformation: strategy, rerank, compress_context: compress })
           });
+          if (response.status === 401) {
+            handleUnauthorized('Session expired. Please sign in again.');
+            renderAssistantError(assistantMessageId, 'Session expired. Please sign in again.', 401);
+            return;
+          }
+          if (!response.ok) {
+            const errMsg = await extractApiErrorMessage(response);
+            renderAssistantError(assistantMessageId, errMsg, response.status);
+            return;
+          }
           const data = await response.json();
-          finalizeAssistantMessage(assistantMessageId, data.answer, data.citations, data);
+          finalizeAssistantMessage(assistantMessageId, data.answer || '', data.citations || [], data);
         }
       } catch (err) {
-        updateAssistantText(assistantMessageId, 'Error executing RAG pipeline: ' + err.message);
+        renderAssistantError(assistantMessageId, 'Error executing RAG pipeline: ' + (err && err.message ? err.message : 'Network error'));
       }
     }
 
@@ -960,17 +1042,75 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       return div;
     }
 
+    async function extractApiErrorMessage(response) {
+      const retryAfterHeader = response.headers.get('Retry-After');
+      let detail = '';
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            const parsed = JSON.parse(text);
+            detail = parsed.detail || parsed.message || text;
+          } catch (_) {
+            detail = text;
+          }
+        }
+      } catch (_) {}
+
+      if (response.status === 429) {
+        const retrySec = retryAfterHeader ? parseInt(retryAfterHeader, 10) : NaN;
+        if (!Number.isNaN(retrySec) && retrySec > 0) {
+          return `Rate limit reached, try again in ${retrySec}s.`;
+        }
+        return detail || 'Rate limit reached, please try again shortly.';
+      }
+      return detail || `Request failed (HTTP ${response.status}).`;
+    }
+
+    function renderAssistantError(id, message, statusCode = null) {
+      const box = document.getElementById(id);
+      if (!box) return;
+      const content = box.querySelector('.assistant-content');
+      content.classList.remove('streaming-pulse');
+      content.className = 'assistant-content leading-relaxed text-xs md:text-sm font-medium text-rose-800 bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start gap-2';
+      const label = statusCode ? `HTTP ${statusCode}` : 'Error';
+      content.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-500 mt-0.5 flex-shrink-0"></i><div><span class="font-bold mr-1">${escapeHtml(label)}:</span><span>${escapeHtml(message)}</span></div>`;
+
+      const metaDiv = box.querySelector('.assistant-meta');
+      if (metaDiv) {
+        metaDiv.innerHTML = '';
+        metaDiv.classList.add('hidden');
+      }
+      document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+    }
+
+    function scrollToSourceCard(messageId, sourceId) {
+      const card = document.getElementById(`source-${messageId}-${sourceId}`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (card._highlightTimeout) clearTimeout(card._highlightTimeout);
+      card.classList.add('ring-2', 'ring-brand-500', 'bg-brand-50', 'border-brand-500');
+      card.classList.remove('bg-slate-50', 'border-slate-200');
+      card._highlightTimeout = setTimeout(() => {
+        card.classList.remove('ring-2', 'ring-brand-500', 'bg-brand-50', 'border-brand-500');
+        card.classList.add('bg-slate-50', 'border-slate-200');
+        card._highlightTimeout = null;
+      }, 2000);
+    }
+
     function updateAssistantText(id, text) {
       const box = document.getElementById(id);
       if (!box) return;
       const content = box.querySelector('.assistant-content');
       content.classList.remove('streaming-pulse');
       content.className = 'assistant-content leading-relaxed text-xs md:text-sm font-normal text-slate-800 space-y-2';
-      content.innerHTML = escapeHtml(text).replace(/\\[(\\d+)\\]/g, '<span class="inline-block px-1.5 py-0.2 mx-0.5 rounded-md bg-brand-50 text-brand-700 font-mono text-[11px] font-bold border border-brand-200">[$1]</span>');
+      content.innerHTML = escapeHtml(text || '').replace(/\\[(\\d+)\\]/g, `<a href="#source-${id}-$1" data-citation-ref="$1" onclick="scrollToSourceCard('${id}', $1); return false;" class="citation-link inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded-md bg-brand-50 hover:bg-brand-100 text-brand-700 font-mono text-[11px] font-bold border border-brand-200 underline decoration-brand-300 cursor-pointer transition">[$1]</a>`);
       document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
     }
 
     function finalizeAssistantMessage(id, answer, citations, meta) {
+      meta = meta || {};
+      citations = Array.isArray(citations) ? citations : [];
       updateAssistantText(id, answer);
       const box = document.getElementById(id);
       if (!box) return;
@@ -979,21 +1119,32 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       metaDiv.classList.remove('hidden');
 
       const queryId = meta.query_id || '';
-      const groundedness = meta.groundedness_score !== undefined ? (meta.groundedness_score * 100).toFixed(0) : '100';
-      const isHallucination = meta.hallucination_warning || false;
-      const isCached = meta.cached || false;
+      const isAbstained = Boolean(meta.abstained);
+      const hasCitations = citations.length > 0;
+      const hasGroundedScore = !isAbstained && hasCitations && typeof meta.groundedness_score === 'number' && !Number.isNaN(meta.groundedness_score);
+      let groundednessBadge = '';
+      if (isAbstained) {
+        groundednessBadge = '<span data-groundedness-badge class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200/80 font-bold">Abstained</span>';
+      } else if (hasGroundedScore) {
+        groundednessBadge = `<span data-groundedness-badge class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold">Grounded: ${(meta.groundedness_score * 100).toFixed(0)}%</span>`;
+      } else {
+        groundednessBadge = '<span data-groundedness-badge class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200 font-bold">Not applicable</span>';
+      }
+
+      const isHallucination = Boolean(meta.hallucination_warning) && !isAbstained;
+      const isCached = Boolean(meta.cached);
 
       let citationsHtml = '';
-      if (citations && citations.length > 0) {
+      if (hasCitations) {
         citationsHtml = `
           <div class="border-t border-slate-100 pt-3 mt-3">
             <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Verified Sources (${citations.length})</span>
             <div class="space-y-2 mt-2">
               ${citations.map(c => `
-                <div class="text-[11px] bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700">
+                <div id="source-${id}-${c.source_id}" data-source-card="${c.source_id}" class="source-card text-[11px] bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 transition-all duration-300">
                   <div class="flex items-center justify-between text-brand-700 font-bold mb-1">
                     <span>[${c.source_id}] ${escapeHtml(c.section_path || 'Document')}</span>
-                    <span class="text-[10px] text-slate-400 font-mono">Score: ${c.relevance_score ? c.relevance_score.toFixed(2) : '1.0'}</span>
+                    <span class="text-[10px] text-slate-400 font-mono">Score: ${c.relevance_score !== null && c.relevance_score !== undefined ? Number(c.relevance_score).toFixed(2) : '1.00'}</span>
                   </div>
                   <p class="text-slate-600 italic font-normal">"${escapeHtml(c.snippet || '')}"</p>
                 </div>
@@ -1006,7 +1157,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       metaDiv.innerHTML = `
         <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[11px] font-semibold text-slate-500">
           <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold">Grounded: ${groundedness}%</span>
+            ${groundednessBadge}
             ${isHallucination ? '<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-bold">Hallucination Warning</span>' : ''}
             ${isCached ? '<span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">Cache Hit</span>' : ''}
             <span>Latency: ${meta.latency_ms || 0}ms</span>
@@ -1014,8 +1165,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
           <div class="flex items-center gap-2 ml-auto">
             <span class="text-slate-400">Helpful?</span>
-            <button onclick="openFeedbackModal('${queryId}', true)" class="hover:text-emerald-600 px-1 py-0.5 transition" title="Thumbs Up"><i class="fa-regular fa-thumbs-up"></i></button>
-            <button onclick="openFeedbackModal('${queryId}', false)" class="hover:text-rose-600 px-1 py-0.5 transition" title="Thumbs Down"><i class="fa-regular fa-thumbs-down"></i></button>
+            <button onclick="openFeedbackModal('${escapeHtml(String(queryId))}', true)" class="hover:text-emerald-600 px-1 py-0.5 transition" title="Thumbs Up"><i class="fa-regular fa-thumbs-up"></i></button>
+            <button onclick="openFeedbackModal('${escapeHtml(String(queryId))}', false)" class="hover:text-rose-600 px-1 py-0.5 transition" title="Thumbs Down"><i class="fa-regular fa-thumbs-down"></i></button>
           </div>
         </div>
         ${citationsHtml}
