@@ -1074,7 +1074,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       content.classList.remove('streaming-pulse');
       content.className = 'assistant-content leading-relaxed text-xs md:text-sm font-medium text-rose-800 bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start gap-2';
       const label = statusCode ? `HTTP ${statusCode}` : 'Error';
-      content.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-500 mt-0.5 flex-shrink-0"></i><div><span class="font-bold mr-1">${escapeHtml(label)}:</span><span>${escapeHtml(message)}</span></div>`;
+      content.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-500 mt-0.5 flex-shrink-0"></i><div><span class="font-bold">${escapeHtml(label)}:</span> <span>${escapeHtml(message)}</span></div>`;
 
       const metaDiv = box.querySelector('.assistant-meta');
       if (metaDiv) {

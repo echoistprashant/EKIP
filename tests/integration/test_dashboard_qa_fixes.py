@@ -350,6 +350,8 @@ async def test_browser_error_bubbles_for_429_and_server_errors(
             await page.wait_for_selector("text=Rate limit reached, try again in 42s.")
 
             chat_text = await page.locator("#chat-messages").inner_text()
+            assert "HTTP 429: Rate limit reached, try again in 58s." in chat_text
+            assert "HTTP 429: Rate limit reached, try again in 42s." in chat_text
             assert "Grounded: 100%" not in chat_text
             assert "Latency: 0ms" not in chat_text
             assert page_errors == []
