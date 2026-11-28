@@ -23,7 +23,19 @@ async def test_dashboard_routes_serve_html():
         assert "text/html" in res_dash.headers["content-type"]
         assert "EKIP" in res_dash.text
 
-        # Verify SRI (Subresource Integrity) hashes on CDN scripts and stylesheets
-        assert 'integrity="sha384-mS5Uq7sE90lgbBDN8xgf34ibEgbZo4gB3tfLY40ZRle+M188BQw8onzNHg6GUZaA"' in res_dash.text
+        # Verify compiled static Tailwind CSS is referenced and dev CDN script is removed
+        assert "cdn.tailwindcss.com" not in res_dash.text
+        assert '<link rel="stylesheet" href="/static/css/dashboard.css">' in res_dash.text
+
+        # Verify Font Awesome CDN retains valid SRI + CORS attributes
+        assert 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css' in res_dash.text
         assert 'integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="' in res_dash.text
         assert 'crossorigin="anonymous"' in res_dash.text
+
+        # Verify compiled Tailwind 3.4 CSS file is served from /static/css/
+        res_css = await client.get("/static/css/dashboard.css")
+        assert res_css.status_code == 200
+        assert "text/css" in res_css.headers["content-type"]
+        assert ".bg-brand-600" in res_css.text
+        assert ".text-brand-700" in res_css.text
+        assert ".bg-slate-50" in res_css.text

@@ -18,6 +18,7 @@ from app.rag.embeddings.factory import get_embedder
 from app.rag.parsing.registry import parser_registry
 from app.repositories.chunks_repo import ChunksRepository
 from app.repositories.documents_repo import DocumentsRepository
+from app.workers.ingestion_worker import cleanup_staged_file
 from app.workers.queue import BaseIngestionQueue, get_ingestion_queue
 
 logger = logging.getLogger("ekip.ingestion_worker")
@@ -140,6 +141,9 @@ class IngestionWorker:
             if cache is not None:
                 await cache.invalidate_collection(tenant_id, doc.collection_id)
 
+            # 9. Remove temporary staged upload from local disk (all data is in Postgres)
+            cleanup_staged_file(file_path, logger)
+
             logger.info(
                 f"Successfully processed ingestion job {job_id} for doc {doc_id}",
                 extra={"chunk_count": len(db_chunks)},
@@ -187,6 +191,7 @@ class IngestionWorker:
                 job.error_message = f"Exceeded maximum retries ({self.max_retries}). Sent to DLQ. Error: {e}"
                 job.completed_at = now
                 await db.commit()
+                cleanup_staged_file(Path(file_path_str), logger)
                 raise
 
     async def process_next_job(self, db: AsyncSession, timeout: int = 1) -> bool:

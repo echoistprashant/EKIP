@@ -1,5 +1,6 @@
 import io
 import uuid
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -66,6 +67,7 @@ In the event of primary failure, patroni elects a new leader automatically.
         assert upload_res.status_code == 202
         doc_data = upload_res.json()
         assert doc_data["status"] == "indexed"
+        assert not Path(doc_data["storage_key"]).exists()
         doc_id = uuid.UUID(doc_data["id"])
 
         # 5. Verify Chunks in PostgreSQL

@@ -17,7 +17,7 @@ from app.models.job import IngestionJob
 from app.models.user import User
 from app.repositories.collections_repo import CollectionsRepository
 from app.repositories.documents_repo import DocumentsRepository
-from app.workers.ingestion_worker import process_document_pipeline
+from app.workers.ingestion_worker import cleanup_staged_file, process_document_pipeline
 from app.workers.queue import get_ingestion_queue
 
 MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB limit
@@ -220,33 +220,36 @@ class IngestionService:
             return created_doc, 0, job
 
         # Synchronous execution
-        job.status = "processing"
-        job.stage = "parsing"
-        job.progress = 20
-        await self.db.commit()
+        try:
+            job.status = "processing"
+            job.stage = "parsing"
+            job.progress = 20
+            await self.db.commit()
 
-        chunk_count = await process_document_pipeline(
-            document_id=created_doc.id,
-            tenant_id=user.tenant_id,
-            raw_content=content,
-            filename=filename,
-            mime_type=mime_type,
-            db=self.db,
-        )
+            chunk_count = await process_document_pipeline(
+                document_id=created_doc.id,
+                tenant_id=user.tenant_id,
+                raw_content=content,
+                filename=filename,
+                mime_type=mime_type,
+                db=self.db,
+            )
 
-        now = datetime.now(UTC)
-        job.status = "completed"
-        job.stage = "completed"
-        job.progress = 100
-        job.chunk_count = chunk_count
-        job.completed_at = now
-        await self.db.commit()
+            now = datetime.now(UTC)
+            job.status = "completed"
+            job.stage = "completed"
+            job.progress = 100
+            job.chunk_count = chunk_count
+            job.completed_at = now
+            await self.db.commit()
 
-        # Invalidate semantic cache for this collection
-        cache = get_semantic_cache()
-        if cache is not None:
-            await cache.invalidate_collection(user.tenant_id, collection_id)
+            # Invalidate semantic cache for this collection
+            cache = get_semantic_cache()
+            if cache is not None:
+                await cache.invalidate_collection(user.tenant_id, collection_id)
 
-        await self.db.refresh(created_doc)
-        await self.db.refresh(job)
-        return created_doc, chunk_count, job
+            await self.db.refresh(created_doc)
+            await self.db.refresh(job)
+            return created_doc, chunk_count, job
+        finally:
+            cleanup_staged_file(file_path)

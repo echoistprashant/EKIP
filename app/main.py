@@ -1,11 +1,13 @@
 import asyncio
 from contextlib import asynccontextmanager, suppress
+from pathlib import Path
 from uuid import uuid4
 
 import structlog
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.analytics import router as analytics_router
@@ -26,8 +28,27 @@ configure_logging()
 logger = get_logger(__name__)
 
 
+def ensure_upload_dir_writable() -> Path:
+    """Create the configured upload directory at startup and verify write access."""
+    upload_dir = Path(settings.UPLOAD_DIR)
+    try:
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        probe_file = upload_dir / f".write_probe_{uuid4().hex}"
+        probe_file.write_bytes(b"")
+        probe_file.unlink()
+    except OSError as exc:
+        logger.critical(
+            "Upload directory is not writable; startup aborted",
+            upload_dir=str(upload_dir.resolve()),
+            error=str(exc),
+        )
+        raise RuntimeError(f"Upload directory '{upload_dir}' is not writable: {exc}") from exc
+    return upload_dir
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ensure_upload_dir_writable()
     worker_task = None
     if settings.RUN_IN_PROCESS_WORKER:
         worker_task = asyncio.create_task(run_ingestion_worker_loop())
@@ -159,6 +180,11 @@ def create_app() -> FastAPI:
     app.include_router(evaluation_router, prefix="/api/v1")
     app.include_router(feedback_router, prefix="/api/v1")
     app.include_router(analytics_router, prefix="/api/v1")
+
+    # Static assets (compiled Tailwind CSS)
+    static_dir = Path(__file__).resolve().parent / "static"
+    static_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
     # Interactive Web Dashboard
     @app.get("/", response_class=HTMLResponse, tags=["Dashboard"], include_in_schema=False)

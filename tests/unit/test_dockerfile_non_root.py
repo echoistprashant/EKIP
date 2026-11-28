@@ -23,3 +23,13 @@ def test_dockerfile_runs_as_non_root():
     assert any("--chown=" in line for line in lines), (
         "Dockerfile COPY command must assign ownership to non-root user via --chown"
     )
+
+    # Verify /app/data/uploads is created and chowned before switching to non-root USER
+    user_idx = next(i for i, line in enumerate(lines) if line.startswith("USER"))
+    pre_user_lines = lines[:user_idx]
+    assert any("/app/data/uploads" in line and "mkdir -p" in line for line in pre_user_lines), (
+        "Dockerfile must create /app/data/uploads before USER directive"
+    )
+    assert any("chown -R appuser:appgroup /app/data" in line for line in pre_user_lines), (
+        "Dockerfile must chown /app/data to appuser:appgroup before USER directive"
+    )

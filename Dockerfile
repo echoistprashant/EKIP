@@ -19,6 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY --chown=appuser:appgroup . .
 
+# Create writable upload staging directory before dropping privileges
+RUN mkdir -p /app/data/uploads && chown -R appuser:appgroup /app/data
+
 # Switch to non-root user
 USER appuser
 

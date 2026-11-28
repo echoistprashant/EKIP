@@ -1,10 +1,12 @@
 import asyncio
+import tempfile
 import uuid
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.main import lifespan
+from app.main import ensure_upload_dir_writable, lifespan
 from app.models.document import Document
 from app.workers.ingestion_worker import process_document_pipeline
 
@@ -69,3 +71,36 @@ async def test_parsing_offloaded_to_thread():
         assert chunk_count >= 1
         # Check that asyncio.to_thread was called for CPU parsing
         assert spy_to_thread.called
+
+
+def test_ensure_upload_dir_writable_creates_missing_dir():
+    """Startup check should create missing upload directory and verify write access."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        target = Path(temp_dir) / "nested" / "uploads"
+        assert not target.exists()
+        with patch("app.main.settings.UPLOAD_DIR", str(target)):
+            resolved = ensure_upload_dir_writable()
+        assert resolved == target
+        assert target.is_dir()
+        assert list(target.iterdir()) == []
+
+
+@pytest.mark.asyncio
+async def test_lifespan_fails_with_clear_log_when_upload_dir_not_writable():
+    """Startup must log a clear error and fail fast if UPLOAD_DIR is not writable."""
+    fake_app = MagicMock()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        blocking_file = Path(temp_dir) / "not_a_dir"
+        blocking_file.write_text("occupied", encoding="utf-8")
+
+        with (
+            patch("app.main.settings.UPLOAD_DIR", str(blocking_file)),
+            patch("app.main.logger") as mock_logger,
+            pytest.raises(RuntimeError, match="not writable"),
+        ):
+            async with lifespan(fake_app):
+                pass
+
+        assert mock_logger.critical.called
+        log_msg = mock_logger.critical.call_args.args[0]
+        assert "not writable" in log_msg.lower()

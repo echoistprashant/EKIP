@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import uuid
+from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +14,15 @@ from app.repositories.chunks_repo import ChunksRepository
 from app.repositories.documents_repo import DocumentsRepository
 
 logger = logging.getLogger("ekip.ingestion_worker")
+
+
+def cleanup_staged_file(file_path: Path, log: logging.Logger | None = None) -> None:
+    """Remove a staged upload file from local disk once it is no longer needed."""
+    active_logger = log or logger
+    try:
+        file_path.unlink(missing_ok=True)
+    except OSError as exc:
+        active_logger.warning(f"Failed to remove staged upload file '{file_path}': {exc}")
 
 
 async def process_document_pipeline(
